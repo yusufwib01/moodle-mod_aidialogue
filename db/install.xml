@@ -4,20 +4,117 @@
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="aidialogue" COMMENT="Each record is one AI Dialogue activity">
+    <TABLE NAME="aidialogue" COMMENT="One row per AI Dialogue activity instance added to a course.">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
-        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
-        <FIELD NAME="name" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false"/>
-        <FIELD NAME="intro" TYPE="text" NOTNULL="false" SEQUENCE="false"/>
-        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
-        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to course."/>
+        <FIELD NAME="name" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false" COMMENT="Activity name shown on course page."/>
+        <FIELD NAME="intro" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Activity description."/>
+        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Format of the intro field. Moodle text format constant."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when activity was created."/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last settings change."/>
+        <FIELD NAME="aiurl" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="AI provider endpoint URL. Validated at session start, not save time."/>
+        <FIELD NAME="aiapikey" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="API key for the AI provider. Stored as plain text in v1."/>
+        <FIELD NAME="aimodel" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Model identifier, e.g. gpt-4o, gemini-1.5-pro."/>
+        <FIELD NAME="knowledgetext" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher-authored source-of-truth injected into the AI system prompt."/>
+        <FIELD NAME="maxattempts" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Max attempts a student is allowed. 0 = unlimited. Independent of completion rules."/>
+        <FIELD NAME="completionpassed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Activity completes when student achieves a passed session. 0=off, 1=on. Passed = all criteria met in a single session."/>
+        <FIELD NAME="completionexhausted" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="Fallback completion when all attempts exhausted without passing. Only fires when completionpassed=1 AND maxattempts>0."/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
       </KEYS>
       <INDEXES>
         <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="aidialogue_criterion" COMMENT="One row per rubric criterion. Up to 5 per activity.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="aidialogueid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to aidialogue."/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1-based. Engine processes criteria in ascending order."/>
+        <FIELD NAME="bloomslevel" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Bloom's taxonomy level. Plain int: 1=Analyze, 2=Evaluate, 4=Create, 8=Custom. No combinations."/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="What evidence would satisfy this criterion. For bloomslevel=8 this is the primary AI instruction."/>
+        <FIELD NAME="minturns" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Min turns AI must probe before closing this criterion. Must be > 0."/>
+        <FIELD NAME="maxturns" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="2" SEQUENCE="false" COMMENT="Hard cap on turns for this criterion. Must be > 0 and > minturns. AI forced to close criterion when reached."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when criterion was created."/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last change."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="fk_aidialogue" TYPE="foreign" FIELDS="aidialogueid" REFTABLE="aidialogue" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="aidialogueid" UNIQUE="false" FIELDS="aidialogueid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="aidialogue_session" COMMENT="One row per student attempt at the activity.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="aidialogueid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to aidialogue."/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to user."/>
+        <FIELD NAME="attemptnumber" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="1-based. Increments per student per activity."/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" SEQUENCE="false" COMMENT="Current state of the session. Valid values: pending, active, complete."/>
+        <FIELD NAME="studentreport" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Plain language feedback shown to student. Written by AI at session_close. Null until then."/>
+        <FIELD NAME="teacherreport" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Cross-criterion narrative shown to teacher. Written by AI at session_close. Null until then."/>
+        <FIELD NAME="aigrade" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="5" COMMENT="AI-suggested grade percentage. Null when grading off or session not yet complete."/>
+        <FIELD NAME="teachergrade" TYPE="number" LENGTH="10" NOTNULL="false" SEQUENCE="false" DECIMALS="5" COMMENT="Teacher override grade. Null until teacher explicitly sets it."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when session row was created."/>
+        <FIELD NAME="timestarted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Unix timestamp — when student sent first message. Null until first turn."/>
+        <FIELD NAME="timefinished" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Unix timestamp — when session_close fired. Null until session completes."/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last change to this row."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="fk_aidialogue" TYPE="foreign" FIELDS="aidialogueid" REFTABLE="aidialogue" REFFIELDS="id"/>
+        <KEY NAME="fk_user" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="aidialogueid" UNIQUE="false" FIELDS="aidialogueid"/>
+        <INDEX NAME="userid" UNIQUE="false" FIELDS="userid"/>
+        <INDEX NAME="aidialogueid-userid-attemptnumber" UNIQUE="true" FIELDS="aidialogueid, userid, attemptnumber"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="aidialogue_turn" COMMENT="One row per message in the conversation.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="sessionid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to aidialogue_session."/>
+        <FIELD NAME="criterionid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="FK to aidialogue_criterion. Null during session_open and session_close turns."/>
+        <FIELD NAME="role" TYPE="char" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Who authored this turn. Valid values: student, ai."/>
+        <FIELD NAME="move" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="Typed move made by the AI. Null for student turns. Valid values: session_open, session_close, criterion_open, criterion_close, probe_deeper, probe_clarify."/>
+        <FIELD NAME="content" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="The actual message text."/>
+        <FIELD NAME="turnnumber" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1-based position of this turn in the session. Global across whole session, not per criterion."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when turn was created."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="fk_session" TYPE="foreign" FIELDS="sessionid" REFTABLE="aidialogue_session" REFFIELDS="id"/>
+        <KEY NAME="fk_criterion" TYPE="foreign" FIELDS="criterionid" REFTABLE="aidialogue_criterion" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="sessionid" UNIQUE="false" FIELDS="sessionid"/>
+        <INDEX NAME="sessionid-turnnumber" UNIQUE="true" FIELDS="sessionid, turnnumber"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="aidialogue_criterion_result" COMMENT="One row per criterion per session. All rows inserted at session creation with status=pending.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="sessionid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to aidialogue_session."/>
+        <FIELD NAME="criterionid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="FK to aidialogue_criterion."/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending" SEQUENCE="false" COMMENT="Evaluation outcome. Valid values: pending, in_progress, met, partial, limit."/>
+        <FIELD NAME="evidence" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Quoted excerpt from conversation used as evidence. Null until criterion closed at criterion_close."/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — row created at session creation."/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last status change."/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="fk_session" TYPE="foreign" FIELDS="sessionid" REFTABLE="aidialogue_session" REFFIELDS="id"/>
+        <KEY NAME="fk_criterion" TYPE="foreign" FIELDS="criterionid" REFTABLE="aidialogue_criterion" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="sessionid" UNIQUE="false" FIELDS="sessionid"/>
+        <INDEX NAME="criterionid" UNIQUE="false" FIELDS="criterionid"/>
+        <INDEX NAME="sessionid-criterionid" UNIQUE="true" FIELDS="sessionid, criterionid"/>
       </INDEXES>
     </TABLE>
   </TABLES>
