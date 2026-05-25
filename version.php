@@ -24,7 +24,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026052100;
+$plugin->version   = 2026052500;
 $plugin->requires  = 2026041000;
 $plugin->component = 'mod_aidialogue';
 $plugin->maturity  = MATURITY_ALPHA;
