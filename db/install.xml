@@ -13,9 +13,6 @@
         <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Format of the intro field. Moodle text format constant."/>
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when activity was created."/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last settings change."/>
-        <FIELD NAME="aiurl" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="AI provider endpoint URL. Validated at session start, not save time."/>
-        <FIELD NAME="aiapikey" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="API key for the AI provider. Stored as plain text in v1."/>
-        <FIELD NAME="aimodel" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Model identifier, e.g. gpt-4o, gemini-1.5-pro."/>
         <FIELD NAME="knowledgetext" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher-authored source-of-truth injected into the AI system prompt."/>
         <FIELD NAME="maxattempts" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Max attempts a student is allowed. 0 = unlimited. Independent of completion rules."/>
         <FIELD NAME="completionpassed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Activity completes when student achieves a passed session. 0=off, 1=on. Passed = all criteria met in a single session."/>
