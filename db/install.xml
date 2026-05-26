@@ -59,6 +59,7 @@
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when session row was created."/>
         <FIELD NAME="timestarted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Unix timestamp — when student sent first message. Null until first turn."/>
         <FIELD NAME="timefinished" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Unix timestamp — when session_close fired. Null until session completes."/>
+        <FIELD NAME="earlyexit" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 if the student manually ended the session before completing all criteria."/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last change to this row."/>
       </FIELDS>
       <KEYS>

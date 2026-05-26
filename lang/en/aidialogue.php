@@ -22,56 +22,110 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['addcriterion'] = 'Add criterion';
-$string['aiapikey'] = 'API key';
-$string['aiapikey_desc'] = 'Secret key for authenticating with the AI provider. Sent as the Bearer token on every request.';
-$string['aidialogue:addinstance'] = 'Add a new AI Dialogue activity';
-$string['aidialogue:view'] = 'View AI Dialogue activity';
-$string['aiheader'] = 'AI connection';
-$string['aiheader_desc'] = 'Configure the OpenAI-compatible API endpoint used by AI Dialogue activities.';
-$string['aimodel'] = 'Model';
-$string['aimodel_desc'] = 'Model identifier to request from the provider (e.g. <code>gpt-4o</code>, <code>gpt-4.1</code>).';
-$string['aiurl'] = 'API base URL';
-$string['aiurl_desc'] = 'Base URL of an OpenAI-compatible API endpoint. The chat completions path (<code>/chat/completions</code>) will be appended automatically.';
-$string['attemptsettingsheader'] = 'Attempt settings';
-$string['bloom_analyse'] = 'Analyse';
-$string['bloom_create'] = 'Create';
-$string['bloom_custom'] = 'Custom';
-$string['bloom_evaluate'] = 'Evaluate';
-$string['bloomslevel'] = 'Bloom\'s level';
-$string['bloomslevel_help'] = 'The cognitive level this criterion targets, based on Bloom\'s taxonomy.';
-$string['completionexhausted'] = 'Mark session as complete when all attempts are exhausted';
-$string['completionexhausted_help'] = 'When enabled, a session is marked complete when the student uses up all available attempts without passing. Only applies when both "Mark session as complete when student passes" and a maximum attempt limit are set.';
-$string['completionpassed'] = 'Mark session as complete when student passes';
-$string['completionpassed_help'] = 'When enabled, a session is considered complete once the student satisfies all criteria in a single attempt.';
-$string['criteriondescription'] = 'Description';
-$string['criteriondescription_help'] = 'Describe what evidence from the student would satisfy this criterion.';
-$string['deletecriterion'] = 'Delete criterion';
-$string['err_atleastonecriterion'] = 'You must define at least one criterion.';
-$string['err_maxattemptspositive'] = 'Maximum attempts must be 0 or greater.';
-$string['err_maxfivecriteria'] = 'You can define a maximum of 5 criteria.';
-$string['err_maxturnsgtminturns'] = 'Max turns must be greater than min turns.';
-$string['err_maxturnspositive'] = 'Max turns must be at least 1.';
-$string['err_minturnspositive'] = 'Min turns must be at least 1.';
-$string['knowledgeheader'] = 'Knowledge';
-$string['knowledgetext'] = 'Knowledge text';
-$string['knowledgetext_help'] = 'The source material the AI will use as its ground truth during the interview. Write in plain text; this content is injected directly into the AI system prompt.';
-$string['maxattempts'] = 'Maximum attempts';
-$string['maxattempts_help'] = 'The maximum number of times a student can attempt this activity. Set to 0 for unlimited attempts.';
-$string['maxturns'] = 'Max turns';
-$string['maxturns_help'] = 'The maximum number of exchanges allowed for this criterion. Must be greater than min turns.';
-$string['minturns'] = 'Min turns';
-$string['minturns_help'] = 'The minimum number of exchanges the AI must complete before closing this criterion.';
-$string['modulename'] = 'AI Dialogue';
-$string['modulename_help'] = 'An AI-powered dialogue activity where students engage in a conversation with an AI.';
-$string['modulename_link'] = 'mod/aidialogue/view';
+// Module metadata.
+$string['modulename']         = 'AI Dialogue';
+$string['modulename_help']    = 'An AI-powered dialogue activity where students engage in a structured conversation with an AI assessor to demonstrate their understanding.';
+$string['modulename_link']    = 'mod/aidialogue/view';
+$string['modulenameplural']   = 'AI Dialogues';
+$string['modulename_tip']     = 'Use the AI Dialogue module for interactive AI conversations.';
 $string['modulename_summary'] = 'Create an AI conversation activity for students.';
-$string['modulename_tip'] = 'Use the AI Dialogue module for interactive AI conversations.';
-$string['modulenameplural'] = 'AI Dialogues';
-$string['page-mod-aidialogue-x'] = 'Any AI Dialogue module page';
-$string['placeholder'] = 'AI Dialogue activity placeholder. Implementation coming soon.';
 $string['pluginadministration'] = 'AI Dialogue module administration';
-$string['pluginname'] = 'AI Dialogue';
-$string['privacy:metadata'] = 'The AI Dialogue activity plugin does not store any personal data.';
-$string['rubricheader'] = 'Rubric';
-$string['search:activity'] = 'AI Dialogue';
+$string['pluginname']         = 'AI Dialogue';
+$string['search:activity']    = 'AI Dialogue';
+$string['page-mod-aidialogue-x'] = 'Any AI Dialogue module page';
+
+// Capabilities.
+$string['aidialogue:addinstance'] = 'Add a new AI Dialogue activity';
+$string['aidialogue:view']        = 'View AI Dialogue activity';
+
+// Privacy.
+$string['privacy:metadata'] = 'The AI Dialogue activity stores conversation transcripts, session outcomes, and AI-generated reports as part of the assessment process. This data includes user-authored messages and is associated with the student\'s account.';
+
+// Admin settings — AI connection.
+$string['aiheader']      = 'AI connection';
+$string['aiheader_desc'] = 'Configure the OpenAI-compatible API endpoint used by AI Dialogue activities.';
+$string['aiurl']         = 'API base URL';
+$string['aiurl_desc']    = 'Base URL of an OpenAI-compatible API endpoint. The chat completions path (<code>/chat/completions</code>) will be appended automatically.';
+$string['aiapikey']      = 'API key';
+$string['aiapikey_desc'] = 'Secret key for authenticating with the AI provider. Sent as the Bearer token on every request.';
+$string['aimodel']       = 'Model';
+$string['aimodel_desc']  = 'Model identifier to request from the provider (e.g. <code>gpt-4o</code>, <code>gpt-4.1</code>).';
+
+// Activity form — knowledge.
+$string['knowledgeheader']    = 'Knowledge';
+$string['knowledgetext']      = 'Knowledge text';
+$string['knowledgetext_help'] = 'The source material the AI will use as its ground truth during the interview. Write in plain text; this content is injected directly into the AI system prompt.';
+
+// Activity form — rubric.
+$string['rubricheader']            = 'Rubric';
+$string['addcriterion']            = 'Add criterion';
+$string['deletecriterion']         = 'Delete criterion';
+$string['bloomslevel']             = 'Bloom\'s level';
+$string['bloomslevel_help']        = 'The cognitive level this criterion targets, based on Bloom\'s taxonomy.';
+$string['bloom_analyse']           = 'Analyse';
+$string['bloom_evaluate']          = 'Evaluate';
+$string['bloom_create']            = 'Create';
+$string['bloom_custom']            = 'Custom';
+$string['criteriondescription']    = 'Description';
+$string['criteriondescription_help'] = 'Describe what evidence from the student would satisfy this criterion.';
+$string['minturns']                = 'Min turns';
+$string['minturns_help']           = 'The minimum number of exchanges the AI must complete before closing this criterion.';
+$string['maxturns']                = 'Max turns';
+$string['maxturns_help']           = 'The maximum number of exchanges allowed for this criterion. Must be greater than min turns.';
+
+// Activity form — attempt settings.
+$string['attemptsettingsheader']  = 'Attempt settings';
+$string['maxattempts']            = 'Maximum attempts';
+$string['maxattempts_help']       = 'The maximum number of times a student can attempt this activity. Set to 0 for unlimited attempts.';
+
+// Completion rules.
+$string['completionpassed']          = 'Student must pass all criteria in at least one attempt';
+$string['completionpassed_help']     = 'When enabled, a session is considered complete once the student satisfies all criteria in a single attempt.';
+$string['completionexhausted']       = 'Student must exhaust all allowed attempts';
+$string['completionexhausted_help']  = 'When enabled, a session is marked complete when the student uses up all available attempts without passing. Only applies when both "Mark session as complete when student passes" and a maximum attempt limit are set.';
+
+// Form validation errors.
+$string['err_atleastonecriterion'] = 'You must define at least one criterion.';
+$string['err_maxfivecriteria']     = 'You can define a maximum of 5 criteria.';
+$string['err_maxattemptspositive'] = 'Maximum attempts must be 0 or greater.';
+$string['err_minturnspositive']    = 'Min turns must be at least 1.';
+$string['err_maxturnspositive']    = 'Max turns must be at least 1.';
+$string['err_maxturnsgtminturns']  = 'Max turns must be greater than min turns.';
+
+// View page — state A (no session).
+$string['nosessionyet']        = 'You have not started this activity yet.';
+$string['attemptsallowed']     = 'You have {$a} attempt(s) allowed.';
+$string['startsession']        = 'Start session';
+$string['previousattempt']     = 'Your previous attempt';
+$string['attemptcount']        = 'Attempts used: {$a->used} / {$a->max}';
+$string['noattemptsremaining'] = 'You have no attempts remaining for this activity.';
+
+// View page — state B (active session).
+$string['conversation']    = 'Conversation';
+$string['you']             = 'You';
+$string['ai']              = 'AI';
+$string['typeyourmessage'] = 'Type your message… (Ctrl+Enter to send)';
+$string['send']            = 'Send';
+$string['thinking']        = 'AI is thinking…';
+$string['endsession']         = 'End session';
+$string['endsession_confirm'] = 'Are you sure you want to end this session? This will count as an attempt and you will not be able to continue.';
+
+// View page — state C (complete).
+$string['sessioncomplete']       = 'Session complete';
+$string['viewresults']           = 'View results';
+$string['yourfeedback']          = 'Your feedback';
+$string['aigrade']               = 'AI suggested grade';
+$string['passed']                = 'Passed';
+$string['notpassed']             = 'Not yet passed';
+$string['tryagain']              = 'Try again';
+$string['sessionendedearlyinfo'] = 'You ended this session early. The feedback below is based on the criteria you completed.';
+
+// Errors.
+$string['error:aicredentialsmissing'] = 'AI credentials are not configured. Please ask a site administrator to configure the AI Dialogue settings.';
+$string['error:aicurlfailed']         = 'Could not connect to the AI service: {$a}';
+$string['error:aiunauthorised']       = 'The AI service rejected the API key. Please ask a site administrator to check the AI Dialogue settings.';
+$string['error:airatelimited']        = 'The AI service is currently rate-limited. Please try again in a moment.';
+$string['error:aihttperror']          = 'The AI service returned an unexpected error (HTTP {$a}).';
+$string['error:aiinvalidjson']        = 'The AI service returned an unreadable response. Please try again.';
+$string['error:aiemptyresponse']      = 'The AI service returned an empty response. Please try again.';
+$string['error:maxattemptsreached']   = 'You have reached the maximum number of attempts for this activity.';

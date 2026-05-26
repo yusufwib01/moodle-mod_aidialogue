@@ -36,6 +36,9 @@ function xmldb_aidialogue_upgrade($oldversion) {
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2026052100) {
+        // ----------------------------------------------------------------
+        // Table: aidialogue (main activity instance record).
+        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -43,14 +46,119 @@ function xmldb_aidialogue_upgrade($oldversion) {
         $table->add_field('name', XMLDB_TYPE_CHAR, '1333', null, XMLDB_NOTNULL, null, null);
         $table->add_field('intro', XMLDB_TYPE_TEXT, null, null, null, null, null);
         $table->add_field('introformat', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('knowledgetext', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('maxattempts', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('completionpassed', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('completionexhausted', XMLDB_TYPE_INTEGER, '1', null, null, null, '0');
 
         $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
         $table->add_index('course', XMLDB_INDEX_NOTUNIQUE, ['course']);
 
-        $dbman->create_table($table);
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // ----------------------------------------------------------------
+        // Table: aidialogue_criterion (rubric criteria for an activity).
+        // ----------------------------------------------------------------
+        $table = new xmldb_table('aidialogue_criterion');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('aidialogueid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('bloomslevel', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('minturns', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('maxturns', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '2');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('aidialogueid', XMLDB_INDEX_NOTUNIQUE, ['aidialogueid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // ----------------------------------------------------------------
+        // Table: aidialogue_session (one attempt per student per activity).
+        // ----------------------------------------------------------------
+        $table = new xmldb_table('aidialogue_session');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('aidialogueid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('attemptnumber', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'pending');
+        $table->add_field('studentreport', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('teacherreport', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('aigrade', XMLDB_TYPE_NUMBER, '10, 5', null, null, null, null);
+        $table->add_field('teachergrade', XMLDB_TYPE_NUMBER, '10, 5', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timestarted', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timefinished', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('aidialogueid_userid_attempt', XMLDB_INDEX_UNIQUE, ['aidialogueid', 'userid', 'attemptnumber']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // ----------------------------------------------------------------
+        // Table: aidialogue_turn (one message per conversation turn).
+        // ----------------------------------------------------------------
+        $table = new xmldb_table('aidialogue_turn');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('sessionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('criterionid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('role', XMLDB_TYPE_CHAR, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('move', XMLDB_TYPE_CHAR, '20', null, null, null, null);
+        $table->add_field('content', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('turnnumber', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('sessionid_turnnumber', XMLDB_INDEX_UNIQUE, ['sessionid', 'turnnumber']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // ----------------------------------------------------------------
+        // Table: aidialogue_criterion_result (per-criterion outcome per session).
+        // ----------------------------------------------------------------
+        $table = new xmldb_table('aidialogue_criterion_result');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('sessionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('criterionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'pending');
+        $table->add_field('evidence', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_index('sessionid_criterionid', XMLDB_INDEX_UNIQUE, ['sessionid', 'criterionid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
 
         upgrade_mod_savepoint(true, 2026052100, 'aidialogue');
+    }
+
+    if ($oldversion < 2026052700) {
+        $table = new xmldb_table('aidialogue_session');
+        $field = new xmldb_field('earlyexit', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        upgrade_mod_savepoint(true, 2026052700, 'aidialogue');
     }
 
     return true;
