@@ -51,6 +51,8 @@ class criterion_config {
     public readonly int $maxturns;
 
     /**
+     * Constructor.
+     *
      * @param int    $id          DB row ID.
      * @param int    $sortorder   1-based processing order.
      * @param int    $bloomslevel One of activity_config::BLOOMS_* constants.

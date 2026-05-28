@@ -26,7 +26,7 @@
  * Bea's design will replace the HTML/CSS here without touching the engine.
  *
  * The "Start Session" button POSTs to this page with action=start.
- * Subsequent chat messages go via ajax/chat.php.
+ * Subsequent chat messages go via the mod_aidialogue/chat AMD module (core/ajax).
  *
  * @package    mod_aidialogue
  * @copyright  2026 Yusuf Wibisono <yusuf.wibisono@moodle.com>
@@ -67,9 +67,7 @@ if (!$PAGE->activityheader->is_title_allowed()) {
 }
 $PAGE->activityheader->set_attrs($activityheader);
 
-// -------------------------------------------------------------------------
 // Build the engine.
-// -------------------------------------------------------------------------
 $config  = activity_config::load_from_db($cm->instance);
 $engine  = new dialogue_engine(
     new session_manager(),
@@ -77,45 +75,36 @@ $engine  = new dialogue_engine(
     new prompt_builder(),
 );
 
-// -------------------------------------------------------------------------
 // Handle actions.
-// -------------------------------------------------------------------------
-$error_message = '';
+$errormessage = '';
 
 if ($action === 'start' && confirm_sesskey()) {
     try {
-        $result  = $engine->start_session($config, $USER->id);
-        $session = $result['session'];
+        $engine->start_session($config, $USER->id);
         // Reload page to show active state with the opening message already in DB.
         redirect(new moodle_url('/mod/aidialogue/view.php', ['id' => $cm->id]));
     } catch (\moodle_exception $e) {
-        $error_message = $e->getMessage();
+        $errormessage = $e->getMessage();
     }
 }
 
-// -------------------------------------------------------------------------
 // Determine current state.
-// -------------------------------------------------------------------------
 $state = $engine->get_session_state($config, $USER->id);
 
-// -------------------------------------------------------------------------
 // Output.
-// -------------------------------------------------------------------------
 echo $OUTPUT->header();
 
 // Error banner (if any action failed).
-if ($error_message) {
+if ($errormessage) {
     echo html_writer::div(
-        html_writer::tag('strong', get_string('error')) . ': ' . s($error_message),
+        html_writer::tag('strong', get_string('error')) . ': ' . s($errormessage),
         'alert alert-danger'
     );
 }
 
-// -------------------------------------------------------------------------
 // STATE A: No active session.
-// -------------------------------------------------------------------------
 if ($state['state'] === 'no_session') {
-    $attempt_count = $state['attempt_count'];
+    $attemptcount = $state['attempt_count'];
     $maxattempts   = $config->maxattempts;
     $last          = $state['last_completed'];
 
@@ -126,7 +115,7 @@ if ($state['state'] === 'no_session') {
         echo html_writer::tag('h4', get_string('previousattempt', 'aidialogue'));
         echo html_writer::tag(
             'p',
-            get_string('attemptcount', 'aidialogue', ['used' => $attempt_count, 'max' => $maxattempts > 0 ? $maxattempts : '∞'])
+            get_string('attemptcount', 'aidialogue', ['used' => $attemptcount, 'max' => $maxattempts > 0 ? $maxattempts : '∞'])
         );
         if (!empty($last->studentreport)) {
             echo html_writer::tag('h5', get_string('yourfeedback', 'aidialogue'));
@@ -143,13 +132,16 @@ if ($state['state'] === 'no_session') {
     }
 
     if ($state['can_start']) {
-        $starturl = new moodle_url('/mod/aidialogue/view.php', ['id' => $cm->id, 'action' => 'start', 'sesskey' => sesskey()]);
         echo html_writer::tag(
             'form',
             html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()])
             . html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value' => $cm->id])
             . html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'start'])
-            . html_writer::empty_tag('input', ['type' => 'submit', 'value' => get_string('startsession', 'aidialogue'), 'class' => 'btn btn-primary']),
+            . html_writer::empty_tag('input', [
+                'type' => 'submit',
+                'value' => get_string('startsession', 'aidialogue'),
+                'class' => 'btn btn-primary',
+            ]),
             ['method' => 'post', 'action' => new moodle_url('/mod/aidialogue/view.php')]
         );
     } else {
@@ -159,9 +151,7 @@ if ($state['state'] === 'no_session') {
     echo html_writer::end_div();
 }
 
-// -------------------------------------------------------------------------
 // STATE B: Active session — chat UI.
-// -------------------------------------------------------------------------
 if ($state['state'] === 'active') {
     $session = $state['session'];
     $turns   = $state['turns'];
@@ -170,7 +160,9 @@ if ($state['state'] === 'active') {
 
     // Transcript.
     echo html_writer::tag('h4', get_string('conversation', 'aidialogue'));
-    echo html_writer::start_div('aidialogue-transcript border p-3 mb-3', ['style' => 'max-height:500px;overflow-y:auto;background:#f8f9fa;', 'id' => 'aidialogue-transcript']);
+    echo html_writer::start_div('aidialogue-transcript border p-3 mb-3', [
+        'id' => 'aidialogue-transcript',
+    ]);
 
     foreach ($turns as $turn) {
         $label   = $turn->role === 'student' ? get_string('you', 'aidialogue') : get_string('ai', 'aidialogue');
@@ -178,13 +170,12 @@ if ($state['state'] === 'active') {
         $bubble  = html_writer::tag(
             'span',
             s($turn->content),
-            ['class' => $turn->role === 'student' ? 'badge bg-primary text-wrap' : 'badge bg-secondary text-wrap',
-             'style' => 'white-space:normal;max-width:80%;display:inline-block;text-align:left;']
+            ['class' => ($turn->role === 'student' ? 'badge bg-primary' : 'badge bg-secondary') . ' text-wrap aidialogue-bubble']
         );
         echo html_writer::tag('div', html_writer::tag('small', $label) . html_writer::tag('div', $bubble), ['class' => $classes]);
     }
 
-    echo html_writer::end_div(); // transcript
+    echo html_writer::end_div();
 
     // Input form (uses JS fetch, falls back gracefully).
     echo html_writer::start_tag('div', ['class' => 'd-flex gap-2 align-items-start', 'id' => 'aidialogue-input-area']);
@@ -193,10 +184,9 @@ if ($state['state'] === 'active') {
         '',
         [
             'id'          => 'aidialogue-input',
-            'class'       => 'form-control',
+            'class'       => 'form-control aidialogue-input-flex',
             'rows'        => '3',
             'placeholder' => get_string('typeyourmessage', 'aidialogue'),
-            'style'       => 'flex:1',
         ]
     );
     echo html_writer::tag(
@@ -214,154 +204,15 @@ if ($state['state'] === 'active') {
 
     echo html_writer::tag('p', '', ['id' => 'aidialogue-status', 'class' => 'text-muted mt-2 small']);
 
-    echo html_writer::end_div(); // aidialogue-chat
+    echo html_writer::end_div();
 
-    // Inline JS — Bea will replace this with proper AMD/JS later.
-    $ajaxurl    = (new moodle_url('/mod/aidialogue/ajax/chat.php'))->out(false);
-    $endajaxurl = (new moodle_url('/mod/aidialogue/ajax/endsession.php'))->out(false);
-    $sesskey    = sesskey();
-    $sessionid  = (int) $session->id;
-    $cmid       = (int) $cm->id;
-    $strthinking        = get_string('thinking', 'aidialogue');
-    $strsessioncomplete = get_string('sessioncomplete', 'aidialogue');
-    $strviewresults     = get_string('viewresults', 'aidialogue');
-    $strendsessionconfirm = get_string('endsession_confirm', 'aidialogue');
-
-    echo <<<JS
-<script>
-(function() {
-    const sendBtn    = document.getElementById('aidialogue-send');
-    const endBtn     = document.getElementById('aidialogue-end');
-    const inputEl    = document.getElementById('aidialogue-input');
-    const transcript = document.getElementById('aidialogue-transcript');
-    const statusEl   = document.getElementById('aidialogue-status');
-
-    function appendMessage(role, content) {
-        const isStudent = role === 'student';
-        const wrap  = document.createElement('div');
-        wrap.className = isStudent ? 'mb-2 text-end' : 'mb-2';
-        const label = document.createElement('small');
-        label.textContent = isStudent ? 'You' : 'AI';
-        const bubble = document.createElement('span');
-        bubble.className = isStudent
-            ? 'badge bg-primary text-wrap'
-            : 'badge bg-secondary text-wrap';
-        bubble.style.cssText = 'white-space:normal;max-width:80%;display:inline-block;text-align:left;';
-        bubble.textContent = content;
-        wrap.appendChild(label);
-        const bDiv = document.createElement('div');
-        bDiv.appendChild(bubble);
-        wrap.appendChild(bDiv);
-        transcript.appendChild(wrap);
-        transcript.scrollTop = transcript.scrollHeight;
-    }
-
-    function lockUI() {
-        sendBtn.disabled = true;
-        endBtn.disabled  = true;
-        inputEl.disabled = true;
-    }
-
-    function unlockUI() {
-        sendBtn.disabled = false;
-        endBtn.disabled  = false;
-        inputEl.disabled = false;
-    }
-
-    sendBtn.addEventListener('click', function() {
-        const content = inputEl.value.trim();
-        if (!content) return;
-
-        lockUI();
-        statusEl.textContent = '{$strthinking}';
-
-        appendMessage('student', content);
-        inputEl.value = '';
-
-        fetch('{$ajaxurl}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({
-                sesskey:   '{$sesskey}',
-                sessionid: '{$sessionid}',
-                cmid:      '{$cmid}',
-                message:   content,
-            }),
-        })
-        .then(r => r.json())
-        .then(data => {
-            statusEl.textContent = '';
-            if (data.error) {
-                statusEl.textContent = 'Error: ' + data.error;
-                unlockUI();
-                return;
-            }
-            appendMessage('ai', data.ai_message);
-            if (data.is_complete) {
-                lockUI();
-                statusEl.innerHTML = '{$strsessioncomplete} <a href="?id={$cmid}">{$strviewresults}</a>';
-            } else {
-                unlockUI();
-                inputEl.focus();
-            }
-        })
-        .catch(err => {
-            statusEl.textContent = 'Request failed: ' + err.message;
-            unlockUI();
-        });
-    });
-
-    endBtn.addEventListener('click', function() {
-        if (!confirm('{$strendsessionconfirm}')) return;
-
-        lockUI();
-        statusEl.textContent = '{$strthinking}';
-
-        fetch('{$endajaxurl}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({
-                sesskey:   '{$sesskey}',
-                sessionid: '{$sessionid}',
-                cmid:      '{$cmid}',
-            }),
-        })
-        .then(r => r.json())
-        .then(data => {
-            statusEl.textContent = '';
-            if (data.error) {
-                statusEl.textContent = 'Error: ' + data.error;
-                unlockUI();
-                return;
-            }
-            statusEl.innerHTML = '{$strsessioncomplete} <a href="?id={$cmid}">{$strviewresults}</a>';
-        })
-        .catch(err => {
-            statusEl.textContent = 'Request failed: ' + err.message;
-            unlockUI();
-        });
-    });
-
-    // Allow Ctrl+Enter or Cmd+Enter to send.
-    inputEl.addEventListener('keydown', function(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            sendBtn.click();
-        }
-    });
-
-    // Scroll transcript to bottom on load.
-    transcript.scrollTop = transcript.scrollHeight;
-})();
-</script>
-JS;
+    $PAGE->requires->js_call_amd('mod_aidialogue/chat', 'init', [(int)$session->id, (int)$cm->id]);
 }
 
-// -------------------------------------------------------------------------
 // STATE C: Session complete — results screen.
-// -------------------------------------------------------------------------
 if ($state['state'] === 'complete') {
     $session       = $state['last_completed'];
-    $attempt_count = $state['attempt_count'];
+    $attemptcount = $state['attempt_count'];
     $maxattempts   = $config->maxattempts;
 
     echo html_writer::start_div('aidialogue-complete p-4');
@@ -377,18 +228,25 @@ if ($state['state'] === 'complete') {
         $passed  = $session->aigrade >= 50;
         $bannerclass = $passed ? 'alert alert-success' : 'alert alert-warning';
         $bannertext  = $passed ? get_string('passed', 'aidialogue') : get_string('notpassed', 'aidialogue');
-        echo html_writer::tag('div', $bannertext . ' — ' . get_string('aigrade', 'aidialogue') . ': ' . round($session->aigrade, 1) . '%', ['class' => $bannerclass]);
+        $bannergrade = round($session->aigrade, 1) . '%';
+        echo html_writer::tag(
+            'div',
+            $bannertext . ' — ' . get_string('aigrade', 'aidialogue') . ': ' . $bannergrade,
+            ['class' => $bannerclass]
+        );
     }
 
-    // Student report.
+    // Student report (may still be pending if the adhoc task has not run yet).
     if (!empty($session->studentreport)) {
         echo html_writer::tag('h5', get_string('yourfeedback', 'aidialogue'));
         echo html_writer::tag('div', format_text($session->studentreport, FORMAT_PLAIN), ['class' => 'border p-3 mb-3 bg-light']);
+    } else {
+        echo html_writer::div(get_string('reportspending', 'aidialogue'), 'alert alert-info');
     }
 
     // Attempt info + start-again button.
     echo html_writer::tag('p', get_string('attemptcount', 'aidialogue', [
-        'used' => $attempt_count,
+        'used' => $attemptcount,
         'max'  => $maxattempts > 0 ? $maxattempts : '∞',
     ]));
 
@@ -398,7 +256,11 @@ if ($state['state'] === 'complete') {
             html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'id', 'value' => $cm->id])
             . html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'start'])
             . html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()])
-            . html_writer::empty_tag('input', ['type' => 'submit', 'value' => get_string('tryagain', 'aidialogue'), 'class' => 'btn btn-outline-primary']),
+            . html_writer::empty_tag('input', [
+                'type' => 'submit',
+                'value' => get_string('tryagain', 'aidialogue'),
+                'class' => 'btn btn-outline-primary',
+            ]),
             ['method' => 'post', 'action' => new moodle_url('/mod/aidialogue/view.php')]
         );
     } else {

@@ -1,0 +1,19 @@
+/* AI Dialogue chat transcript container. */
+.aidialogue-transcript {
+    max-height: 500px;
+    overflow-y: auto;
+    background: #f8f9fa;
+}
+
+/* Textarea inside the flex send row. */
+.aidialogue-input-flex {
+    flex: 1;
+}
+
+/* Shared bubble style for student and AI messages. */
+.aidialogue-bubble {
+    white-space: normal;
+    max-width: 80%;
+    display: inline-block;
+    text-align: left;
+}

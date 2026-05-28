@@ -36,9 +36,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2026052100) {
-        // ----------------------------------------------------------------
         // Table: aidialogue (main activity instance record).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -60,9 +58,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_criterion (rubric criteria for an activity).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_criterion');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -82,9 +78,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_session (one attempt per student per activity).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_session');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -108,9 +102,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_turn (one message per conversation turn).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_turn');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -129,9 +121,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_criterion_result (per-criterion outcome per session).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_criterion_result');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);

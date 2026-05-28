@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * AI Dialogue module capability definition.
+ * External functions and web service definitions for mod_aidialogue.
  *
  * @package    mod_aidialogue
  * @copyright  2026 Yusuf Wibisono <yusuf.wibisono@moodle.com>
@@ -24,27 +24,21 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$capabilities = [
-    'mod/aidialogue:view' => [
-        'captype' => 'read',
-        'contextlevel' => CONTEXT_MODULE,
-        'archetypes' => [
-            'student'        => CAP_ALLOW,
-            'teacher'        => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW,
-            'manager'        => CAP_ALLOW,
-        ],
+$functions = [
+    'mod_aidialogue_submit_chat_message' => [
+        'classname'      => 'mod_aidialogue\external\submit_chat_message',
+        'description'    => 'Submit a student chat message and return the AI response.',
+        'type'           => 'write',
+        'ajax'           => true,
+        'loginrequired'  => true,
+        'capabilities'   => 'mod/aidialogue:view',
     ],
-
-    'mod/aidialogue:addinstance' => [
-        'riskbitmask' => RISK_XSS,
-        'captype' => 'write',
-        'contextlevel' => CONTEXT_COURSE,
-        'archetypes' => [
-            'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW,
-        ],
-        'clonepermissionsfrom' => 'moodle/course:manageactivities',
+    'mod_aidialogue_end_session' => [
+        'classname'      => 'mod_aidialogue\external\end_session',
+        'description'    => 'End an active dialogue session early at the student\'s request.',
+        'type'           => 'write',
+        'ajax'           => true,
+        'loginrequired'  => true,
+        'capabilities'   => 'mod/aidialogue:view',
     ],
-
 ];

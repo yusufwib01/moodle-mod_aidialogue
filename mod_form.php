@@ -233,7 +233,7 @@ class mod_aidialogue_mod_form extends moodleform_mod {
 
                 if ($maxturns < 1) {
                     $errors['maxturns[' . $key . ']'] = get_string('err_maxturnspositive', 'aidialogue');
-                } elseif ($maxturns <= $minturns) {
+                } else if ($maxturns <= $minturns) {
                     $errors['maxturns[' . $key . ']'] = get_string('err_maxturnsgtminturns', 'aidialogue');
                 }
             }

@@ -16,6 +16,11 @@
 
 namespace mod_aidialogue\local;
 
+use core\http_client;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\RequestOptions;
+
 /**
  * Thin wrapper around an OpenAI-compatible chat completions endpoint.
  *
@@ -37,6 +42,27 @@ class ai_client {
 
     /** @var int Maximum tokens to request in the completion response. */
     const MAX_TOKENS = 1024;
+
+    /**
+     * Temperature for all chat completions requests.
+     *
+     * 0.4 gives deterministic, protocol-following responses suited to structured
+     * assessment. Higher values increase creativity but risk the AI ignoring the
+     * [MOVE:...] protocol or producing inconsistent criterion outcomes.
+     */
+    const TEMPERATURE = 0.4;
+
+    /** @var http_client|null Injected HTTP client; null defers to the DI container. */
+    private readonly ?http_client $httpclient;
+
+    /**
+     * Constructor.
+     *
+     * @param http_client|null $httpclient HTTP client for requests. Null uses the DI container.
+     */
+    public function __construct(?http_client $httpclient = null) {
+        $this->httpclient = $httpclient;
+    }
 
     /**
      * Send a messages array to the AI and return the assistant's reply text.
@@ -61,56 +87,61 @@ class ai_client {
         $endpoint = rtrim($aiurl, '/') . '/chat/completions';
 
         $payload = json_encode([
-            'model'      => $aimodel,
-            'messages'   => $messages,
-            'max_tokens' => self::MAX_TOKENS,
+            'model'       => $aimodel,
+            'messages'    => $messages,
+            'max_tokens'  => self::MAX_TOKENS,
+            'temperature' => self::TEMPERATURE,
         ]);
 
-        $curl = new \curl();
-        $curl->setopt([
-            'CURLOPT_RETURNTRANSFER' => true,
-            'CURLOPT_TIMEOUT'        => self::TIMEOUT_SECONDS,
-            'CURLOPT_POST'           => true,
-            'CURLOPT_POSTFIELDS'     => $payload,
-            'CURLOPT_HTTPHEADER'     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $aiapikey,
+        $request = new Request(
+            method:  'POST',
+            uri:     $endpoint,
+            headers: [
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Bearer ' . $aiapikey,
             ],
-        ]);
+            body: $payload,
+        );
 
-        $rawresponse = $curl->post($endpoint, $payload);
-        $httpcode    = $curl->get_info()['http_code'] ?? 0;
-
-        if ($curl->get_errno()) {
-            throw new \moodle_exception(
-                'error:aicurlfailed',
-                'mod_aidialogue',
-                '',
-                $curl->error,
-            );
+        try {
+            $response = $this->get_client()->send($request, [
+                RequestOptions::TIMEOUT     => self::TIMEOUT_SECONDS,
+                RequestOptions::HTTP_ERRORS => false,
+            ]);
+        } catch (RequestException $e) {
+            throw new \moodle_exception('error:aicurlfailed', 'mod_aidialogue', '', $e->getMessage());
         }
 
-        if ($httpcode === 401) {
+        $status = $response->getStatusCode();
+
+        if ($status === 401) {
             throw new \moodle_exception('error:aiunauthorised', 'mod_aidialogue');
         }
 
-        if ($httpcode === 429) {
+        if ($status === 429) {
             throw new \moodle_exception('error:airatelimited', 'mod_aidialogue');
         }
 
-        if ($httpcode < 200 || $httpcode >= 300) {
+        $body = $response->getBody()->getContents();
+
+        if ($status < 200 || $status >= 300) {
             throw new \moodle_exception(
                 'error:aihttperror',
                 'mod_aidialogue',
                 '',
-                $httpcode,
+                $status . ': ' . $this->extract_api_error($body, $status),
             );
         }
 
-        $decoded = json_decode($rawresponse, true);
+        $decoded = json_decode($body, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new \moodle_exception('error:aiinvalidjson', 'mod_aidialogue');
+        }
+
+        $finishreason = $decoded['choices'][0]['finish_reason'] ?? null;
+        if ($finishreason === 'length') {
+            throw new \moodle_exception('error:airesponsetruncated', 'mod_aidialogue');
         }
 
         $text = $decoded['choices'][0]['message']['content'] ?? null;
@@ -120,5 +151,32 @@ class ai_client {
         }
 
         return trim($text);
+    }
+
+    /**
+     * Return the HTTP client, using the DI container if none was injected.
+     *
+     * @return http_client
+     */
+    private function get_client(): http_client {
+        return $this->httpclient ?? \core\di::get(http_client::class);
+    }
+
+    /**
+     * Extract a human-readable error message from an API error response body.
+     *
+     * OpenAI-compatible APIs return JSON with an error.message field on 4xx.
+     * 5xx responses typically have no structured body, so fall back to the status code.
+     *
+     * @param string $body   Raw response body.
+     * @param int    $status HTTP status code.
+     * @return string  Error message string, or the status code as a string if unavailable.
+     */
+    private function extract_api_error(string $body, int $status): string {
+        if ($status >= 500) {
+            return (string) $status;
+        }
+        $decoded = json_decode($body, true);
+        return $decoded['error']['message'] ?? (string) $status;
     }
 }

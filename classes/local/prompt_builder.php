@@ -46,9 +46,7 @@ namespace mod_aidialogue\local;
  */
 class prompt_builder {
 
-    // -------------------------------------------------------------------------
-    // System prompt
-    // -------------------------------------------------------------------------
+    // System prompt.
 
     /**
      * Build the system prompt for the AI across the entire session.
@@ -60,11 +58,11 @@ class prompt_builder {
      * @return string  The system prompt text.
      */
     public function build_system_prompt(activity_config $config): string {
-        $criteria_list = '';
+        $criterialist = '';
         foreach ($config->criteria as $i => $criterion) {
             $n = $i + 1;
-            $level_label = $this->blooms_label($criterion->bloomslevel);
-            $criteria_list .= "  Criterion {$n} [{$level_label}]: {$criterion->description}\n";
+            $levellabel = $this->blooms_label($criterion->bloomslevel);
+            $criterialist .= "  Criterion {$n} [{$levellabel}]: {$criterion->description}\n";
         }
 
         return <<<EOT
@@ -76,7 +74,7 @@ KNOWLEDGE BASE (this is the single source of truth for this activity):
 {$config->knowledgetext}
 
 ASSESSMENT CRITERIA (work through these in order, one at a time):
-{$criteria_list}
+{$criterialist}
 BEHAVIOURAL RULES:
 - Be concise and conversational. Avoid bullet points or long explanations.
 - Never volunteer information from the knowledge base or confirm factual correctness.
@@ -94,9 +92,7 @@ This tag is stripped before showing the response to the student. Never omit it.
 EOT;
     }
 
-    // -------------------------------------------------------------------------
-    // Session-level prompts
-    // -------------------------------------------------------------------------
+    // Session-level prompts.
 
     /**
      * Build the messages array for the AI's opening turn (session_open).
@@ -112,8 +108,8 @@ EOT;
         activity_config $config,
         criterion_config $criterion,
     ): array {
-        $level_label    = $this->blooms_label($criterion->bloomslevel);
-        $probe_guidance = $this->blooms_probe_guidance($criterion->bloomslevel, $criterion->description);
+        $levellabel    = $this->blooms_label($criterion->bloomslevel);
+        $probeguidance = $this->blooms_probe_guidance($criterion->bloomslevel, $criterion->description);
 
         return [
             [
@@ -128,9 +124,9 @@ BEGIN SESSION.
 Start the conversation with a brief, friendly greeting. Then ask one focused opening
 question to begin assessing the following criterion:
 
-Criterion [{$level_label}]: {$criterion->description}
+Criterion [{$levellabel}]: {$criterion->description}
 
-Probe guidance: {$probe_guidance}
+Probe guidance: {$probeguidance}
 
 End your response with [MOVE:session_open].
 EOT,
@@ -184,9 +180,7 @@ EOT;
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Criterion-level prompts
-    // -------------------------------------------------------------------------
+    // Criterion-level prompts.
 
     /**
      * Build the messages array for introducing a new criterion mid-session
@@ -205,8 +199,8 @@ EOT;
         criterion_config $criterion,
         array $turns,
     ): array {
-        $level_label    = $this->blooms_label($criterion->bloomslevel);
-        $probe_guidance = $this->blooms_probe_guidance($criterion->bloomslevel, $criterion->description);
+        $levellabel    = $this->blooms_label($criterion->bloomslevel);
+        $probeguidance = $this->blooms_probe_guidance($criterion->bloomslevel, $criterion->description);
 
         return [
             [
@@ -220,9 +214,9 @@ EOT;
 Move naturally to the next area of assessment. Ask one focused question to begin
 assessing the following criterion:
 
-Criterion [{$level_label}]: {$criterion->description}
+Criterion [{$levellabel}]: {$criterion->description}
 
-Probe guidance: {$probe_guidance}
+Probe guidance: {$probeguidance}
 
 Keep the transition brief and conversational. End your response with [MOVE:criterion_open].
 EOT,
@@ -243,23 +237,23 @@ EOT,
      *
      * @param activity_config  $config      Activity configuration.
      * @param criterion_config $criterion   The current criterion being assessed.
-     * @param array            $all_turns   All turns in the session so far.
+     * @param array            $allturns   All turns in the session so far.
      * @param int              $studentturns Number of student turns on this criterion so far.
-     * @param bool             $force_close  If true, AI must close this criterion now.
+     * @param bool             $forceclose  If true, AI must close this criterion now.
      * @return array  OpenAI-format messages array.
      */
     public function build_probe_messages(
         activity_config $config,
         criterion_config $criterion,
-        array $all_turns,
+        array $allturns,
         int $studentturns,
-        bool $force_close,
+        bool $forceclose,
     ): array {
-        $level_label    = $this->blooms_label($criterion->bloomslevel);
-        $probe_guidance = $this->blooms_probe_guidance($criterion->bloomslevel, $criterion->description);
-        $min_met        = $studentturns >= $criterion->minturns ? 'YES' : 'NO';
+        $levellabel    = $this->blooms_label($criterion->bloomslevel);
+        $probeguidance = $this->blooms_probe_guidance($criterion->bloomslevel, $criterion->description);
+        $minmet        = $studentturns >= $criterion->minturns ? 'YES' : 'NO';
 
-        if ($force_close) {
+        if ($forceclose) {
             $instruction = <<<EOT
 The maximum turn limit for this criterion has been reached. You MUST close it now regardless
 of the quality of evidence provided. Acknowledge the student's last response briefly (one
@@ -271,9 +265,9 @@ EOT;
             $instruction = <<<EOT
 Assess the student's last response against this criterion:
 
-Criterion [{$level_label}]: {$criterion->description}
-Probe guidance: {$probe_guidance}
-Minimum turns met: {$min_met}
+Criterion [{$levellabel}]: {$criterion->description}
+Probe guidance: {$probeguidance}
+Minimum turns met: {$minmet}
 
 Choose ONE of the following moves:
   - If the student has provided sufficient evidence AND minimum turns are met:
@@ -295,7 +289,7 @@ EOT;
                 'role'    => 'system',
                 'content' => $this->build_system_prompt($config),
             ],
-            ...$this->turns_to_messages($all_turns),
+            ...$this->turns_to_messages($allturns),
             [
                 'role'    => 'user',
                 'content' => $instruction,
@@ -303,9 +297,7 @@ EOT;
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Report generation prompts
-    // -------------------------------------------------------------------------
+    // Report generation prompts.
 
     /**
      * Build the messages array for generating the student-facing report.
@@ -323,22 +315,23 @@ EOT;
      * across blocks rather than processing a single long undifferentiated transcript.
      *
      * @param activity_config $config            Activity configuration.
-     * @param array           $turns_by_criterion Turns grouped by criterionid.
+     * @param array           $turnsbycriterion Turns grouped by criterionid.
      *                                            Keyed by criterionid; each value is
      *                                            an ordered array of turn records.
      *                                            Obtain via build_turns_by_criterion().
-     * @param array           $criterion_results  Criterion result records keyed by criterionid.
+     * @param array           $criterionresults  Criterion result records keyed by criterionid.
      * @return array  OpenAI-format messages array.
      */
     public function build_student_report_messages(
         activity_config $config,
-        array $turns_by_criterion,
-        array $criterion_results,
+        array $turnsbycriterion,
+        array $criterionresults,
         bool $earlyexit = false,
     ): array {
-        $criterion_blocks = $this->format_criterion_blocks($config, $turns_by_criterion, $criterion_results, true);
-        $earlyexit_note   = $earlyexit
-            ? "\nNote: The student ended this session early. Some criteria may have no or limited evidence. Provide feedback on what was covered and encourage them to try again.\n"
+        $criterionblocks = $this->format_criterion_blocks($config, $turnsbycriterion, $criterionresults, true);
+        $earlyexitnote   = $earlyexit
+            ? "\nNote: The student ended this session early. Some criteria may have no or limited "
+                . "evidence. Provide feedback on what was covered and encourage them to try again.\n"
             : '';
 
         return [
@@ -351,8 +344,8 @@ EOT;
                 'content' => <<<EOT
 Below is the student's assessed conversation, broken down by topic. Each block contains
 the dialogue exchange for that topic and its assessed outcome.
-{$earlyexit_note}
-{$criterion_blocks}
+{$earlyexitnote}
+{$criterionblocks}
 
 Write a personalised feedback report for the student synthesising across all topics above.
 
@@ -381,20 +374,21 @@ EOT,
      * format: GRADE:nn.nn
      *
      * @param activity_config $config            Activity configuration.
-     * @param array           $turns_by_criterion Turns grouped by criterionid.
+     * @param array           $turnsbycriterion Turns grouped by criterionid.
      *                                            Obtain via build_turns_by_criterion().
-     * @param array           $criterion_results  Criterion result records keyed by criterionid.
+     * @param array           $criterionresults  Criterion result records keyed by criterionid.
      * @return array  OpenAI-format messages array.
      */
     public function build_teacher_report_messages(
         activity_config $config,
-        array $turns_by_criterion,
-        array $criterion_results,
+        array $turnsbycriterion,
+        array $criterionresults,
         bool $earlyexit = false,
     ): array {
-        $criterion_blocks = $this->format_criterion_blocks($config, $turns_by_criterion, $criterion_results);
-        $earlyexit_note   = $earlyexit
-            ? "\nNote: The student ended this session early. Criteria marked as abandoned were not assessed. Reflect this in the grade.\n"
+        $criterionblocks = $this->format_criterion_blocks($config, $turnsbycriterion, $criterionresults);
+        $earlyexitnote   = $earlyexit
+            ? "\nNote: The student ended this session early. Criteria marked as abandoned were "
+                . "not assessed. Reflect this in the grade.\n"
             : '';
 
         return [
@@ -407,8 +401,8 @@ EOT,
                 'content' => <<<EOT
 Below is the student's assessed conversation, broken down by criterion. Each block contains
 the dialogue exchange for that criterion and its assessed outcome.
-{$earlyexit_note}
-{$criterion_blocks}
+{$earlyexitnote}
+{$criterionblocks}
 
 Write a concise professional assessment report for the teacher synthesising across all criteria above.
 
@@ -436,14 +430,14 @@ EOT,
      * Session-level turns (criterionid = null: session_open, session_close) are
      * excluded — they carry no per-criterion evidence.
      *
-     * @param array $all_turns All turn records for the session, ordered by turnnumber.
+     * @param array $allturns All turn records for the session, ordered by turnnumber.
      * @return array  Array keyed by criterionid (int), each value an ordered array of turns.
      */
-    public function build_turns_by_criterion(array $all_turns): array {
+    public function build_turns_by_criterion(array $allturns): array {
         $map = [];
-        foreach ($all_turns as $turn) {
+        foreach ($allturns as $turn) {
             if ($turn->criterionid === null) {
-                continue; // session_open / session_close — not criterion-specific
+                continue; // Session_open / session_close turns are not criterion-specific.
             }
             $cid = (int) $turn->criterionid;
             $map[$cid][] = $turn;
@@ -451,9 +445,7 @@ EOT,
         return $map;
     }
 
-    // -------------------------------------------------------------------------
-    // Move parsing
-    // -------------------------------------------------------------------------
+    // Move parsing.
 
     /**
      * Extract the [MOVE:xxx] tag from the end of an AI response.
@@ -498,9 +490,7 @@ EOT,
         return ['grade' => $grade, 'report' => $report];
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
+    // Private helpers.
 
     /**
      * Convert an array of turn DB records to an OpenAI-format messages array.
@@ -586,28 +576,28 @@ EOT,
      * synthesises a report across multiple criteria.
      *
      * @param activity_config $config            Activity config.
-     * @param array           $turns_by_criterion Turns keyed by criterionid (from build_turns_by_criterion()).
-     * @param array           $criterion_results  Result records keyed by criterionid.
-     * @param bool            $for_student        When true, headers omit criterion numbers/labels
+     * @param array           $turnsbycriterion Turns keyed by criterionid (from build_turns_by_criterion()).
+     * @param array           $criterionresults  Result records keyed by criterionid.
+     * @param bool            $forstudent        When true, headers omit criterion numbers/labels
      *                                            to prevent them leaking into student-facing text.
      * @return string  Formatted multi-block string for inclusion in a prompt.
      */
     private function format_criterion_blocks(
         activity_config $config,
-        array $turns_by_criterion,
-        array $criterion_results,
-        bool $for_student = false,
+        array $turnsbycriterion,
+        array $criterionresults,
+        bool $forstudent = false,
     ): string {
         $blocks = [];
 
         foreach ($config->criteria as $i => $criterion) {
             $n        = $i + 1;
             $label    = $this->blooms_label($criterion->bloomslevel);
-            $result   = $criterion_results[$criterion->id] ?? null;
+            $result   = $criterionresults[$criterion->id] ?? null;
             $status   = $result ? $result->status : 'pending';
             $evidence = ($result && !empty($result->evidence)) ? $result->evidence : '(no evidence recorded)';
 
-            if ($for_student) {
+            if ($forstudent) {
                 $block = "=== Topic: {$criterion->description} ===\n";
             } else {
                 $block  = "=== Criterion {$n} [{$label}] ===\n";
@@ -617,11 +607,11 @@ EOT,
             $block .= "Evidence: {$evidence}\n";
             $block .= "Dialogue:\n";
 
-            $criterion_turns = $turns_by_criterion[$criterion->id] ?? [];
-            if (empty($criterion_turns)) {
+            $criterionturns = $turnsbycriterion[$criterion->id] ?? [];
+            if (empty($criterionturns)) {
                 $block .= "  (no dialogue recorded for this criterion)\n";
             } else {
-                foreach ($criterion_turns as $turn) {
+                foreach ($criterionturns as $turn) {
                     $speaker = $turn->role === 'student' ? 'Student' : 'AI';
                     $content = $turn->role === 'ai'
                         ? trim(preg_replace('/\[MOVE:[a-z_]+\]\s*$/i', '', $turn->content))

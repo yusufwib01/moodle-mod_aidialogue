@@ -54,9 +54,7 @@ namespace mod_aidialogue\local;
  */
 class session_manager {
 
-    // -------------------------------------------------------------------------
-    // Session operations
-    // -------------------------------------------------------------------------
+    // Session operations.
 
     /**
      * Create a new session for a student on an activity.
@@ -74,22 +72,19 @@ class session_manager {
     public function create_session(int $aidialogueid, int $userid, activity_config $config): \stdClass {
         global $DB;
 
-        // Check attempt limit.
-        if ($config->maxattempts > 0) {
-            $existing = $DB->count_records('aidialogue_session', [
-                'aidialogueid' => $aidialogueid,
-                'userid'       => $userid,
-            ]);
-            if ($existing >= $config->maxattempts) {
-                throw new \moodle_exception('error:maxattemptsreached', 'mod_aidialogue');
-            }
-            $attemptnumber = $existing + 1;
-        } else {
-            $attemptnumber = $DB->count_records('aidialogue_session', [
-                'aidialogueid' => $aidialogueid,
-                'userid'       => $userid,
-            ]) + 1;
+        $transaction = $DB->start_delegated_transaction();
+
+        // Count inside the transaction so concurrent requests serialise on the same snapshot.
+        $existing = $DB->count_records('aidialogue_session', [
+            'aidialogueid' => $aidialogueid,
+            'userid'       => $userid,
+        ]);
+
+        if ($config->maxattempts > 0 && $existing >= $config->maxattempts) {
+            throw new \moodle_exception('error:maxattemptsreached', 'mod_aidialogue');
         }
+
+        $attemptnumber = $existing + 1;
 
         $now = time();
 
@@ -113,6 +108,8 @@ class session_manager {
             $result->timemodified = $now;
             $DB->insert_record('aidialogue_criterion_result', $result);
         }
+
+        $transaction->allow_commit();
 
         return $session;
     }
@@ -224,19 +221,17 @@ class session_manager {
     }
 
     /**
-     * Close a session: set status='complete', store reports and AI grade.
+     * Close a session: set status='complete' and record timing and early-exit flag.
      *
-     * @param int    $sessionid     Session ID.
-     * @param string $studentreport AI-generated feedback text for the student.
-     * @param string $teacherreport AI-generated narrative summary for the teacher.
-     * @param float  $aigrade       AI-suggested grade as a percentage (0–100).
-     * @param bool   $earlyexit     True if the student manually ended the session early.
+     * Reports and grade are intentionally omitted here — they are generated
+     * asynchronously by the generate_session_reports adhoc task and written
+     * back via update_session_reports().
+     *
+     * @param int  $sessionid  Session ID.
+     * @param bool $earlyexit  True if the student manually ended the session early.
      */
     public function close_session(
         int $sessionid,
-        string $studentreport,
-        string $teacherreport,
-        float $aigrade,
         bool $earlyexit = false,
     ): void {
         global $DB;
@@ -244,14 +239,40 @@ class session_manager {
         $now = time();
 
         $update = new \stdClass();
+        $update->id           = $sessionid;
+        $update->status       = 'complete';
+        $update->earlyexit    = (int) $earlyexit;
+        $update->timefinished = $now;
+        $update->timemodified = $now;
+
+        $DB->update_record('aidialogue_session', $update);
+    }
+
+    /**
+     * Store AI-generated reports and grade on a completed session.
+     *
+     * Called by the generate_session_reports adhoc task after async report
+     * generation succeeds.
+     *
+     * @param int    $sessionid     Session ID.
+     * @param string $studentreport AI-generated feedback text for the student.
+     * @param string $teacherreport AI-generated narrative summary for the teacher.
+     * @param float  $aigrade       AI-suggested grade as a percentage (0–100).
+     */
+    public function update_session_reports(
+        int $sessionid,
+        string $studentreport,
+        string $teacherreport,
+        float $aigrade,
+    ): void {
+        global $DB;
+
+        $update = new \stdClass();
         $update->id            = $sessionid;
-        $update->status        = 'complete';
         $update->studentreport = $studentreport;
         $update->teacherreport = $teacherreport;
         $update->aigrade       = $aigrade;
-        $update->earlyexit     = (int) $earlyexit;
-        $update->timefinished  = $now;
-        $update->timemodified  = $now;
+        $update->timemodified  = time();
 
         $DB->update_record('aidialogue_session', $update);
     }
@@ -274,9 +295,7 @@ class session_manager {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Turn operations
-    // -------------------------------------------------------------------------
+    // Turn operations.
 
     /**
      * Insert a new turn into the conversation transcript.
@@ -371,9 +390,7 @@ class session_manager {
         ]);
     }
 
-    // -------------------------------------------------------------------------
-    // Criterion result operations
-    // -------------------------------------------------------------------------
+    // Criterion result operations.
 
     /**
      * Update the status (and optionally evidence) for a criterion result row.

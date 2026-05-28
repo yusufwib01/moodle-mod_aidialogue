@@ -39,16 +39,16 @@ namespace mod_aidialogue\local;
 class activity_config {
 
     /** @var int Bloom's level: Analyse — break down, identify parts, distinguish. */
-    const BLOOMS_ANALYSE = 1;
+    public const BLOOMS_ANALYSE = 1;
 
     /** @var int Bloom's level: Evaluate — judge, critique, weigh evidence. */
-    const BLOOMS_EVALUATE = 2;
+    public const BLOOMS_EVALUATE = 2;
 
     /** @var int Bloom's level: Create — synthesise, design, propose novel solutions. */
-    const BLOOMS_CREATE = 4;
+    public const BLOOMS_CREATE = 4;
 
     /** @var int Bloom's level: Custom — use criterion description verbatim as AI instruction. */
-    const BLOOMS_CUSTOM = 8;
+    public const BLOOMS_CUSTOM = 8;
 
     /** @var int Activity instance ID. */
     public readonly int $id;
@@ -175,12 +175,4 @@ class activity_config {
         return $this->criteria[$index] ?? null;
     }
 
-    /**
-     * Return the total number of criteria for this activity.
-     *
-     * @return int
-     */
-    public function criterion_count(): int {
-        return count($this->criteria);
-    }
 }
