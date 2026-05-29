@@ -131,7 +131,9 @@ function aidialogue_delete_instance($id) {
     }
 
     $cm = get_coursemodule_from_instance('aidialogue', $id);
-    \core_completion\api::update_completion_date_event($cm->id, 'aidialogue', $id, null);
+    if ($cm) {
+        \core_completion\api::update_completion_date_event($cm->id, 'aidialogue', $id, null);
+    }
 
     // Collect session IDs so we can delete their child rows.
     $sessionids = $DB->get_fieldset_select('aidialogue_session', 'id', 'aidialogueid = :id', ['id' => $id]);
@@ -173,6 +175,11 @@ function aidialogue_save_criteria(int $aidialogueid, stdClass $data): void {
     $sortorder = 1;
     $submittedids = [];
 
+    // Pre-fetch all existing criterion IDs for this activity to avoid a record_exists() call per iteration.
+    $existingcriterionids = array_flip(
+        $DB->get_fieldset_select('aidialogue_criterion', 'id', 'aidialogueid = ?', [$aidialogueid])
+    );
+
     foreach ($data->description as $key => $description) {
         if (trim($description) === '') {
             continue;
@@ -182,10 +189,7 @@ function aidialogue_save_criteria(int $aidialogueid, stdClass $data): void {
         $maxturns = (int)$data->maxturns[$key];
         $criterionid = (int)($data->criterionid[$key] ?? 0);
 
-        $isexistingcriterion = $criterionid > 0 && $DB->record_exists(
-            'aidialogue_criterion',
-            ['id' => $criterionid, 'aidialogueid' => $aidialogueid],
-        );
+        $isexistingcriterion = $criterionid > 0 && isset($existingcriterionids[$criterionid]);
         if ($isexistingcriterion) {
             $criterion = new stdClass();
             $criterion->id           = $criterionid;
@@ -344,4 +348,25 @@ function aidialogue_get_coursemodule_info($coursemodule) {
     ];
 
     return $info;
+}
+
+/**
+ * Add "Class report" to the activity settings navigation (secondary nav).
+ *
+ * @param settings_navigation $settingsnav The settings navigation object.
+ * @param navigation_node $aidialoguenode The module node in the nav tree.
+ */
+function aidialogue_extend_settings_navigation(settings_navigation $settingsnav, navigation_node $aidialoguenode): void {
+    global $PAGE;
+
+    if (has_capability('mod/aidialogue:viewreport', $PAGE->context)) {
+        $url = new moodle_url('/mod/aidialogue/report.php', ['id' => $PAGE->cm->id]);
+        $aidialoguenode->add(
+            get_string('classreport', 'aidialogue'),
+            $url,
+            navigation_node::TYPE_SETTING,
+            null,
+            'mod_aidialogue_report',
+        );
+    }
 }

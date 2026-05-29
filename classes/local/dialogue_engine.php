@@ -547,7 +547,7 @@ EOT
                 'role'    => 'user',
                 'content' => 'Quote the single most relevant excerpt from the student\'s responses above '
                     . 'that best demonstrates (or fails to demonstrate) their understanding of the criterion. '
-                    . '1–2 sentences maximum. Quote only student text, do not paraphrase.',
+                    . '1-2 sentences maximum. Quote only student text, do not paraphrase.',
             ],
         ];
 

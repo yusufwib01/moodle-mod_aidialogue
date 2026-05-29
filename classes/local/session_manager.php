@@ -228,7 +228,7 @@ class session_manager {
      * @param int    $sessionid     Session ID.
      * @param string $studentreport AI-generated feedback text for the student.
      * @param string $teacherreport AI-generated narrative summary for the teacher.
-     * @param float  $aigrade       AI-suggested grade as a percentage (0–100).
+     * @param float  $aigrade       AI-suggested grade as a percentage (0-100).
      * @param bool   $earlyexit     True if the student manually ended the session early.
      */
     public function close_session(

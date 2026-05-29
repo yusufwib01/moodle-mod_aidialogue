@@ -111,9 +111,10 @@ class submit_chat_message extends external_api {
         $result = $engine->process_student_turn($config, $sessionrecord, $message);
 
         return [
-            'aimessage'  => $result['ai_message'],
-            'move'       => $result['move'],
-            'iscomplete' => $result['is_complete'],
+            'aimessage'   => $result['ai_message'],
+            'move'        => $result['move'],
+            'iscomplete'  => $result['is_complete'],
+            'timecreated' => time(),
         ];
     }
 
@@ -124,9 +125,10 @@ class submit_chat_message extends external_api {
      */
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'aimessage'  => new external_value(PARAM_RAW, 'AI response text.'),
-            'move'       => new external_value(PARAM_ALPHANUMEXT, 'Move type (e.g. probe_deeper, session_close).'),
-            'iscomplete' => new external_value(PARAM_BOOL, 'True when the session has been closed.'),
+            'aimessage'   => new external_value(PARAM_RAW, 'AI response text.'),
+            'move'        => new external_value(PARAM_ALPHANUMEXT, 'Move type (e.g. probe_deeper, session_close).'),
+            'iscomplete'  => new external_value(PARAM_BOOL, 'True when the session has been closed.'),
+            'timecreated' => new external_value(PARAM_INT, 'Unix timestamp when the AI turn was recorded.'),
         ]);
     }
 }

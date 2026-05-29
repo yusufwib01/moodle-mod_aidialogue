@@ -26,6 +26,8 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/course/moodleform_mod.php');
 
+use mod_aidialogue\local\activity_config;
+
 /**
  * Module instance settings form.
  */
@@ -257,10 +259,10 @@ class mod_aidialogue_mod_form extends moodleform_mod {
      */
     private function get_blooms_levels(): array {
         return [
-            1 => get_string('bloom_analyse', 'aidialogue'),
-            2 => get_string('bloom_evaluate', 'aidialogue'),
-            4 => get_string('bloom_create', 'aidialogue'),
-            8 => get_string('bloom_custom', 'aidialogue'),
+            activity_config::BLOOMS_ANALYSE  => get_string('bloom_analyse', 'aidialogue'),
+            activity_config::BLOOMS_EVALUATE => get_string('bloom_evaluate', 'aidialogue'),
+            activity_config::BLOOMS_CREATE   => get_string('bloom_create', 'aidialogue'),
+            activity_config::BLOOMS_CUSTOM   => get_string('bloom_custom', 'aidialogue'),
         ];
     }
 }
