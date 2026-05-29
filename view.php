@@ -134,7 +134,6 @@ if ($state['state'] === 'no_session') {
     }
 
     if ($state['can_start']) {
-        $starturl = new moodle_url('/mod/aidialogue/view.php', ['id' => $cm->id, 'action' => 'start', 'sesskey' => sesskey()]);
         echo html_writer::tag(
             'form',
             html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()])
@@ -157,27 +156,64 @@ if ($state['state'] === 'active') {
     $session = $state['session'];
     $turns   = $state['turns'];
 
-    echo html_writer::start_div('aidialogue-chat p-4');
+    echo html_writer::start_div('aidialogue-chat mx-auto');
+
+    // Privacy notice.
+    echo html_writer::tag(
+        'div',
+        html_writer::tag('i', '', ['class' => 'fa fa-shield fa-fw me-1', 'aria-hidden' => 'true'])
+            . s(get_string('privacynotice', 'aidialogue')),
+        ['class' => 'aidialogue-privacy-notice text-muted small text-center mb-4']
+    );
 
     // Transcript.
-    echo html_writer::tag('h4', get_string('conversation', 'aidialogue'));
-    echo html_writer::start_div('aidialogue-transcript bg-light border p-3 mb-3', ['id' => 'aidialogue-transcript']);
+    echo html_writer::start_div('aidialogue-transcript mb-3', ['id' => 'aidialogue-transcript']);
 
     foreach ($turns as $turn) {
-        $label   = $turn->role === 'student' ? get_string('you', 'aidialogue') : get_string('ai', 'aidialogue');
-        $classes = $turn->role === 'student' ? 'mb-2 text-end' : 'mb-2';
-        $bubble  = html_writer::tag(
+        $isstudent = $turn->role === 'student';
+        $timestr   = userdate($turn->timecreated, '%H:%M');
+        $srlabel   = html_writer::tag(
             'span',
-            s($turn->content),
-            ['class' => ($turn->role === 'student' ? 'badge bg-primary' : 'badge bg-secondary') . ' text-wrap aidialogue-bubble']
+            $isstudent ? get_string('you', 'aidialogue') : get_string('ai', 'aidialogue'),
+            ['class' => 'sr-only visually-hidden']
         );
-        echo html_writer::tag('div', html_writer::tag('small', $label) . html_writer::tag('div', $bubble), ['class' => $classes]);
+
+        if ($isstudent) {
+            $avatar = html_writer::tag(
+                'span',
+                html_writer::tag('span', 'S', ['aria-hidden' => 'true', 'class' => 'opacity-50']),
+                ['class' => 'badge rounded-circle d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-25 text-dark flex-shrink-0 ms-2 aidialogue-avatar', 'aria-hidden' => 'true']
+            );
+            $inner = html_writer::tag('div', s($turn->content), ['class' => 'aidialogue-bubble aidialogue-bubble-student'])
+                   . html_writer::tag('div', $timestr, ['class' => 'aidialogue-timestamp']);
+            echo html_writer::tag(
+                'div',
+                $srlabel . html_writer::tag('div', $inner, ['class' => 'flex-grow-1 d-flex flex-column align-items-end']) . $avatar,
+                ['class' => 'aidialogue-turn aidialogue-turn-student d-flex align-items-start mb-3']
+            );
+        } else {
+            $avatar = html_writer::tag(
+                'span',
+                html_writer::tag('i', '', ['class' => 'fa-solid fa-wand-magic-sparkles', 'aria-hidden' => 'true']),
+                ['class' => 'badge rounded-circle d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-25 text-primary flex-shrink-0 me-2 aidialogue-avatar', 'aria-hidden' => 'true']
+            );
+            $inner = html_writer::tag('div', s($turn->content), ['class' => 'aidialogue-bubble aidialogue-bubble-ai'])
+                   . html_writer::tag('div', $timestr, ['class' => 'aidialogue-timestamp']);
+            echo html_writer::tag(
+                'div',
+                $srlabel . $avatar . html_writer::tag('div', $inner, ['class' => 'flex-grow-1']),
+                ['class' => 'aidialogue-turn aidialogue-turn-ai d-flex align-items-start mb-3']
+            );
+        }
     }
 
     echo html_writer::end_div(); // End transcript.
 
-    // Input form (driven by the mod_aidialogue/chat AMD module).
-    echo html_writer::start_tag('div', ['class' => 'd-flex gap-2 align-items-start', 'id' => 'aidialogue-input-area']);
+    // Status line.
+    echo html_writer::tag('p', '', ['id' => 'aidialogue-status', 'class' => 'text-muted small my-2']);
+
+    // Input row.
+    echo html_writer::start_tag('div', ['class' => 'd-flex gap-2 align-items-end', 'id' => 'aidialogue-input-area']);
     echo html_writer::tag(
         'textarea',
         '',
@@ -190,64 +226,103 @@ if ($state['state'] === 'active') {
     );
     echo html_writer::tag(
         'button',
-        get_string('send', 'aidialogue'),
-        ['id' => 'aidialogue-send', 'class' => 'btn btn-primary', 'type' => 'button']
+        html_writer::tag('i', '', ['class' => 'fa fa-arrow-up fa-fw', 'aria-hidden' => 'true'])
+            . html_writer::tag('span', get_string('send', 'aidialogue'), ['class' => 'sr-only visually-hidden']),
+        ['id' => 'aidialogue-send', 'class' => 'btn btn-primary aidialogue-send-btn', 'type' => 'button']
     );
     echo html_writer::end_tag('div');
 
+    // End session button sits below the input row.
     echo html_writer::tag(
         'button',
         get_string('endsession', 'aidialogue'),
         ['id' => 'aidialogue-end', 'class' => 'btn btn-outline-danger btn-sm mt-2', 'type' => 'button']
     );
 
-    echo html_writer::tag('p', '', ['id' => 'aidialogue-status', 'class' => 'text-muted mt-2 small']);
-
     echo html_writer::end_div(); // End aidialogue-chat.
 
-    // Drive the chat UI through the AMD module, which calls the registered external functions.
     $PAGE->requires->js_call_amd('mod_aidialogue/chat', 'init', [(int) $session->id, (int) $cm->id]);
 }
 
 // STATE C: Session complete — results screen.
 if ($state['state'] === 'complete') {
-    $session       = $state['last_completed'];
+    $session      = $state['last_completed'];
     $attemptcount = $state['attempt_count'];
-    $maxattempts   = $config->maxattempts;
+    $maxattempts  = $config->maxattempts;
 
-    echo html_writer::start_div('aidialogue-complete p-4');
-    echo html_writer::tag('h4', get_string('sessioncomplete', 'aidialogue'));
+    $renderer = $PAGE->get_renderer('mod_aidialogue');
+
+    // Load criterion results keyed by criterionid.
+    $rawresults        = $DB->get_records('aidialogue_criterion_result', ['sessionid' => $session->id]);
+    $resultsbycriteria = [];
+    foreach ($rawresults as $r) {
+        $resultsbycriteria[$r->criterionid] = $r;
+    }
+
+    // Parse student report into the three structured sections.
+    $reportparts = prompt_builder::parse_student_report($session->studentreport ?? '');
+
+    echo html_writer::start_div('aidialogue-feedback mx-auto');
 
     // Early-exit info banner.
     if (!empty($session->earlyexit)) {
-        echo html_writer::div(get_string('sessionendedearlyinfo', 'aidialogue'), 'alert alert-warning');
+        echo html_writer::div(get_string('sessionendedearlyinfo', 'aidialogue'), 'alert alert-warning mb-4');
     }
 
-    // Pass/fail banner — green if grade ≥ 50.
-    if (!empty($session->aigrade)) {
-        $passed  = $session->aigrade >= 50;
-        $bannerclass = $passed ? 'alert alert-success' : 'alert alert-warning';
-        $bannertext  = $passed ? get_string('passed', 'aidialogue') : get_string('notpassed', 'aidialogue');
-        $bannergrade = round($session->aigrade, 1) . '%';
-        echo html_writer::tag(
-            'div',
-            $bannertext . ' — ' . get_string('aigrade', 'aidialogue') . ': ' . $bannergrade,
-            ['class' => $bannerclass]
-        );
+    // "Your results" card — numbered criteria list with status icons.
+    echo html_writer::start_div('card mb-4');
+    echo html_writer::start_div('card-body');
+    echo html_writer::tag('h3', get_string('yourresults', 'aidialogue'), ['class' => 'card-title h5 mb-3']);
+
+    foreach ($config->criteria as $i => $criterion) {
+        $result = $resultsbycriteria[$criterion->id] ?? null;
+        $status = $result ? $result->status : 'pending';
+
+        echo html_writer::start_div('d-flex align-items-center gap-2 py-2');
+        echo html_writer::tag('span', ($i + 1) . '.', ['class' => 'text-muted fw-semibold flex-shrink-0']);
+        echo html_writer::tag('span', s($criterion->description), ['class' => 'flex-grow-1']);
+        echo $renderer->report_status_icon($status);
+        echo html_writer::end_div();
     }
 
-    // Student report.
-    if (!empty($session->studentreport)) {
-        echo html_writer::tag('h5', get_string('yourfeedback', 'aidialogue'));
-        echo html_writer::tag('div', format_text($session->studentreport, FORMAT_PLAIN), ['class' => 'border p-3 mb-3 bg-light']);
+    echo html_writer::end_div();
+    echo html_writer::end_div(); // End card.
+
+    // Feedback cards — one per section.
+    if (!empty($reportparts['strengths'])) {
+        echo html_writer::start_div('card mb-4');
+        echo html_writer::start_div('card-body');
+        echo html_writer::tag('h3', get_string('strengths', 'aidialogue'), ['class' => 'card-title h5 mb-3']);
+        echo html_writer::tag('p', format_text($reportparts['strengths'], FORMAT_PLAIN), ['class' => 'mb-0']);
+        echo html_writer::end_div();
+        echo html_writer::end_div();
     }
 
-    // Attempt info + start-again button.
+    if (!empty($reportparts['areas'])) {
+        echo html_writer::start_div('card mb-4');
+        echo html_writer::start_div('card-body');
+        echo html_writer::tag('h3', get_string('areastoworkon', 'aidialogue'), ['class' => 'card-title h5 mb-3']);
+        echo html_writer::tag('p', format_text($reportparts['areas'], FORMAT_PLAIN), ['class' => 'mb-0']);
+        echo html_writer::end_div();
+        echo html_writer::end_div();
+    }
+
+    if (!empty($reportparts['next'])) {
+        echo html_writer::start_div('card mb-4');
+        echo html_writer::start_div('card-body');
+        echo html_writer::tag('h3', get_string('whattodonext', 'aidialogue'), ['class' => 'card-title h5 mb-3']);
+        echo html_writer::tag('p', format_text($reportparts['next'], FORMAT_PLAIN), ['class' => 'mb-0']);
+        echo html_writer::end_div();
+        echo html_writer::end_div();
+    }
+
+    // Attempt count.
     echo html_writer::tag('p', get_string('attemptcount', 'aidialogue', [
         'used' => $attemptcount,
         'max'  => $maxattempts > 0 ? $maxattempts : '∞',
-    ]));
+    ]), ['class' => 'text-muted small mb-3']);
 
+    // Try again / exhausted.
     if ($state['can_start']) {
         echo html_writer::tag(
             'form',
@@ -263,7 +338,7 @@ if ($state['state'] === 'complete') {
         echo html_writer::tag('p', html_writer::tag('em', get_string('noattemptsremaining', 'aidialogue')));
     }
 
-    echo html_writer::end_div();
+    echo html_writer::end_div(); // End aidialogue-feedback.
 }
 
 echo $OUTPUT->footer();
