@@ -26,13 +26,13 @@
 $string['modulename']         = 'AI Dialogue';
 $string['modulename_help']    = 'An AI-powered dialogue activity where students engage in a structured conversation with an AI assessor to demonstrate their understanding.';
 $string['modulename_link']    = 'mod/aidialogue/view';
-$string['modulenameplural']   = 'AI Dialogues';
-$string['modulename_tip']     = 'Use the AI Dialogue module for interactive AI conversations.';
 $string['modulename_summary'] = 'Create an AI conversation activity for students.';
+$string['modulename_tip']     = 'Use the AI Dialogue module for interactive AI conversations.';
+$string['modulenameplural']   = 'AI Dialogues';
+$string['page-mod-aidialogue-x'] = 'Any AI Dialogue module page';
 $string['pluginadministration'] = 'AI Dialogue module administration';
 $string['pluginname']         = 'AI Dialogue';
 $string['search:activity']    = 'AI Dialogue';
-$string['page-mod-aidialogue-x'] = 'Any AI Dialogue module page';
 
 // Capabilities.
 $string['aidialogue:addinstance'] = 'Add a new AI Dialogue activity';
@@ -40,6 +40,29 @@ $string['aidialogue:view']        = 'View AI Dialogue activity';
 
 // Privacy.
 $string['privacy:metadata'] = 'The AI Dialogue activity stores conversation transcripts, session outcomes, and AI-generated reports as part of the assessment process. This data includes user-authored messages and is associated with the student\'s account.';
+$string['privacy:metadata:aidialogue_session'] = 'Stores one record per student attempt, including status, grades, and AI-generated feedback reports.';
+$string['privacy:metadata:aidialogue_session:userid'] = 'The ID of the student who owns this session.';
+$string['privacy:metadata:aidialogue_session:attemptnumber'] = 'The sequential attempt number for this session (1-based).';
+$string['privacy:metadata:aidialogue_session:status'] = 'The session status (pending, active, or complete).';
+$string['privacy:metadata:aidialogue_session:studentreport'] = 'The AI-generated feedback report shown to the student.';
+$string['privacy:metadata:aidialogue_session:teacherreport'] = 'The AI-generated assessment narrative shown to the teacher.';
+$string['privacy:metadata:aidialogue_session:aigrade'] = 'The AI-suggested grade percentage for the session.';
+$string['privacy:metadata:aidialogue_session:teachergrade'] = 'The teacher-overridden grade percentage for the session.';
+$string['privacy:metadata:aidialogue_session:earlyexit'] = 'Whether the student ended the session early.';
+$string['privacy:metadata:aidialogue_session:timecreated'] = 'The time the session was created.';
+$string['privacy:metadata:aidialogue_session:timestarted'] = 'The time the student sent their first message.';
+$string['privacy:metadata:aidialogue_session:timefinished'] = 'The time the session was completed.';
+$string['privacy:metadata:aidialogue_turn'] = 'Stores individual conversation turns (student and AI messages) within a session.';
+$string['privacy:metadata:aidialogue_turn:role'] = 'Whether this turn was authored by the student or the AI.';
+$string['privacy:metadata:aidialogue_turn:move'] = 'The conversational move the AI made on this turn (for AI turns only).';
+$string['privacy:metadata:aidialogue_turn:content'] = 'The text content of the message.';
+$string['privacy:metadata:aidialogue_turn:timecreated'] = 'The time this turn was recorded.';
+$string['privacy:metadata:aidialogue_criterion_result'] = 'Stores the assessed outcome for each rubric criterion within a session.';
+$string['privacy:metadata:aidialogue_criterion_result:status'] = 'The outcome status for this criterion (pending, in_progress, met, partial, limit, or abandoned).';
+$string['privacy:metadata:aidialogue_criterion_result:evidence'] = 'A short evidence excerpt quoted from the student\'s responses.';
+$string['privacy:metadata:aiservice'] = 'In order to generate conversational responses and assessment reports, student messages are sent to an external AI service.';
+$string['privacy:metadata:aiservice:message'] = 'The student\'s message text, sent to the AI service to generate a response.';
+$string['privacy:sessionsubcontext'] = 'Attempt {$a}';
 
 // Admin settings — AI connection.
 $string['aiheader']      = 'AI connection';
@@ -121,6 +144,10 @@ $string['tryagain']              = 'Try again';
 $string['sessionendedearlyinfo'] = 'You ended this session early. The feedback below is based on the criteria you completed.';
 
 // Errors.
+$string['error:sessionnotfound']        = 'The session could not be found. It may have been deleted.';
+$string['error:sessionownership']        = 'You do not have permission to access this session.';
+$string['error:sessionalreadycomplete']  = 'This session has already been completed.';
+$string['error:ajax']                    = 'An error occurred. Please try again.';
 $string['error:aicredentialsmissing'] = 'AI credentials are not configured. Please ask a site administrator to configure the AI Dialogue settings.';
 $string['error:aicurlfailed']         = 'Could not connect to the AI service: {$a}';
 $string['error:aiunauthorised']       = 'The AI service rejected the API key. Please ask a site administrator to check the AI Dialogue settings.';
@@ -128,4 +155,7 @@ $string['error:airatelimited']        = 'The AI service is currently rate-limite
 $string['error:aihttperror']          = 'The AI service returned an unexpected error (HTTP {$a}).';
 $string['error:aiinvalidjson']        = 'The AI service returned an unreadable response. Please try again.';
 $string['error:aiemptyresponse']      = 'The AI service returned an empty response. Please try again.';
+$string['error:airesponsetruncated']  = 'The AI response was cut off because it exceeded the maximum token limit. Please try again or contact your administrator.';
 $string['error:maxattemptsreached']   = 'You have reached the maximum number of attempts for this activity.';
+$string['error:messageempty']         = 'Message cannot be empty.';
+$string['error:messagetoolong']       = 'Message exceeds maximum allowed length.';

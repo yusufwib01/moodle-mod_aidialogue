@@ -49,14 +49,11 @@ namespace mod_aidialogue\local;
  *   complete — session has been closed and reports generated
  *
  * @package    mod_aidialogue
- * @copyright  2026 Moodle HQ
+ * @copyright  2026 Andi Permana <andi.permana@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class session_manager {
-
-    // -------------------------------------------------------------------------
-    // Session operations
-    // -------------------------------------------------------------------------
+    // Session operations.
 
     /**
      * Create a new session for a student on an activity.
@@ -74,22 +71,22 @@ class session_manager {
     public function create_session(int $aidialogueid, int $userid, activity_config $config): \stdClass {
         global $DB;
 
-        // Check attempt limit.
-        if ($config->maxattempts > 0) {
-            $existing = $DB->count_records('aidialogue_session', [
-                'aidialogueid' => $aidialogueid,
-                'userid'       => $userid,
-            ]);
-            if ($existing >= $config->maxattempts) {
-                throw new \moodle_exception('error:maxattemptsreached', 'mod_aidialogue');
-            }
-            $attemptnumber = $existing + 1;
-        } else {
-            $attemptnumber = $DB->count_records('aidialogue_session', [
-                'aidialogueid' => $aidialogueid,
-                'userid'       => $userid,
-            ]) + 1;
+        // Wrap the attempt count, session insert, and criterion result inserts in a
+        // single transaction so the whole set is atomic — a failure midway through
+        // leaves no orphaned session row, and the count serialises against concurrent
+        // create_session() calls for the same student.
+        $transaction = $DB->start_delegated_transaction();
+
+        $existing = $DB->count_records('aidialogue_session', [
+            'aidialogueid' => $aidialogueid,
+            'userid'       => $userid,
+        ]);
+
+        if ($config->maxattempts > 0 && $existing >= $config->maxattempts) {
+            throw new \moodle_exception('error:maxattemptsreached', 'mod_aidialogue');
         }
+
+        $attemptnumber = $existing + 1;
 
         $now = time();
 
@@ -114,6 +111,8 @@ class session_manager {
             $DB->insert_record('aidialogue_criterion_result', $result);
         }
 
+        $transaction->allow_commit();
+
         return $session;
     }
 
@@ -128,8 +127,8 @@ class session_manager {
     public function delete_session(int $sessionid): void {
         global $DB;
         $DB->delete_records('aidialogue_criterion_result', ['sessionid' => $sessionid]);
-        $DB->delete_records('aidialogue_turn',             ['sessionid' => $sessionid]);
-        $DB->delete_records('aidialogue_session',          ['id'        => $sessionid]);
+        $DB->delete_records('aidialogue_turn', ['sessionid' => $sessionid]);
+        $DB->delete_records('aidialogue_session', ['id'        => $sessionid]);
     }
 
     /**
@@ -274,9 +273,7 @@ class session_manager {
         );
     }
 
-    // -------------------------------------------------------------------------
-    // Turn operations
-    // -------------------------------------------------------------------------
+    // Turn operations.
 
     /**
      * Insert a new turn into the conversation transcript.
@@ -371,9 +368,7 @@ class session_manager {
         ]);
     }
 
-    // -------------------------------------------------------------------------
-    // Criterion result operations
-    // -------------------------------------------------------------------------
+    // Criterion result operations.
 
     /**
      * Update the status (and optionally evidence) for a criterion result row.

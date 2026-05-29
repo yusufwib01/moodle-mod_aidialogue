@@ -36,9 +36,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
     $dbman = $DB->get_manager();
 
     if ($oldversion < 2026052100) {
-        // ----------------------------------------------------------------
         // Table: aidialogue (main activity instance record).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -60,9 +58,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_criterion (rubric criteria for an activity).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_criterion');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -82,9 +78,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_session (one attempt per student per activity).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_session');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -108,9 +102,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_turn (one message per conversation turn).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_turn');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -129,9 +121,7 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        // ----------------------------------------------------------------
         // Table: aidialogue_criterion_result (per-criterion outcome per session).
-        // ----------------------------------------------------------------
         $table = new xmldb_table('aidialogue_criterion_result');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -159,6 +149,21 @@ function xmldb_aidialogue_upgrade($oldversion) {
             $dbman->add_field($table, $field);
         }
         upgrade_mod_savepoint(true, 2026052700, 'aidialogue');
+    }
+
+    if ($oldversion < 2026052900) {
+        // Tighten completionexhausted: was nullable, now NOT NULL DEFAULT 0.
+        $table = new xmldb_table('aidialogue');
+        $field = new xmldb_field('completionexhausted', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Ensure no NULL values remain before enforcing NOT NULL.
+        $DB->set_field_select('aidialogue', 'completionexhausted', 0, 'completionexhausted IS NULL');
+
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->change_field_notnull($table, $field);
+        }
+
+        upgrade_mod_savepoint(true, 2026052900, 'aidialogue');
     }
 
     return true;

@@ -61,9 +61,9 @@ function aidialogue_add_instance($data, $mform = null) {
     $data->timecreated  = $now;
     $data->timemodified = $now;
 
-    $data->knowledgetext       = $data->knowledgetext       ?? '';
-    $data->maxattempts         = $data->maxattempts         ?? 0;
-    $data->completionpassed    = $data->completionpassed    ?? 0;
+    $data->knowledgetext       = $data->knowledgetext ?? '';
+    $data->maxattempts         = $data->maxattempts ?? 0;
+    $data->completionpassed    = $data->completionpassed ?? 0;
     $data->completionexhausted = $data->completionexhausted ?? 0;
 
     $data->id = $DB->insert_record('aidialogue', $data);
@@ -94,9 +94,9 @@ function aidialogue_update_instance($data, $mform) {
     $data->timemodified = time();
     $data->id = $data->instance;
 
-    $data->knowledgetext       = $data->knowledgetext       ?? '';
-    $data->maxattempts         = $data->maxattempts         ?? 0;
-    $data->completionpassed    = $data->completionpassed    ?? 0;
+    $data->knowledgetext       = $data->knowledgetext ?? '';
+    $data->maxattempts         = $data->maxattempts ?? 0;
+    $data->completionpassed    = $data->completionpassed ?? 0;
     $data->completionexhausted = $data->completionexhausted ?? 0;
 
     $DB->update_record('aidialogue', $data);
@@ -142,9 +142,9 @@ function aidialogue_delete_instance($id) {
         $DB->delete_records_select('aidialogue_criterion_result', "sessionid {$insql}", $inparams);
     }
 
-    $DB->delete_records('aidialogue_session',  ['aidialogueid' => $id]);
+    $DB->delete_records('aidialogue_session', ['aidialogueid' => $id]);
     $DB->delete_records('aidialogue_criterion', ['aidialogueid' => $id]);
-    $DB->delete_records('aidialogue',           ['id' => $aidialogue->id]);
+    $DB->delete_records('aidialogue', ['id' => $aidialogue->id]);
 
     return true;
 }
@@ -217,13 +217,15 @@ function aidialogue_save_criteria(int $aidialogueid, stdClass $data): void {
     if ($submittedids) {
         [$notsql, $notparams] = $DB->get_in_or_equal($submittedids, SQL_PARAMS_QM, 'param', false);
         $todelete = $DB->get_fieldset_select(
-            'aidialogue_criterion', 'id',
+            'aidialogue_criterion',
+            'id',
             "aidialogueid = ? AND id $notsql",
             array_merge([$aidialogueid], $notparams),
         );
     } else {
         $todelete = $DB->get_fieldset_select(
-            'aidialogue_criterion', 'id',
+            'aidialogue_criterion',
+            'id',
             'aidialogueid = ?',
             [$aidialogueid],
         );
@@ -231,6 +233,10 @@ function aidialogue_save_criteria(int $aidialogueid, stdClass $data): void {
 
     if ($todelete) {
         [$delsql, $delparams] = $DB->get_in_or_equal($todelete);
+        // Null out criterionid on any turns that referenced a deleted criterion so the
+        // transcript content is preserved (the turn still appears in get_turns()) while
+        // the now-broken foreign key reference is removed.
+        $DB->set_field_select('aidialogue_turn', 'criterionid', null, "criterionid $delsql", $delparams);
         $DB->delete_records_select('aidialogue_criterion_result', "criterionid $delsql", $delparams);
         $DB->delete_records_select('aidialogue_criterion', "id $delsql", $delparams);
     }
@@ -332,97 +338,10 @@ function aidialogue_get_coursemodule_info($coursemodule) {
     }
 
     // Advertise custom completion rules so the completion UI shows them.
-    $result = [];
-    if (!empty($aidialogue->completionpassed)) {
-        $result[] = 'completionpassed';
-    }
-    if (!empty($aidialogue->completionexhausted)) {
-        $result[] = 'completionexhausted';
-    }
-    if ($result) {
-        $info->customdata['customcompletionrules'] = $result;
-    }
+    $info->customdata['customcompletionrules'] = [
+        'completionpassed'    => $aidialogue->completionpassed,
+        'completionexhausted' => $aidialogue->completionexhausted,
+    ];
 
     return $info;
-}
-
-/**
- * Return the completion state for a user in this activity.
- *
- * Called by Moodle's completion system when FEATURE_COMPLETION_HAS_RULES is true.
- * Returns COMPLETION_COMPLETE if the user meets ANY enabled custom completion rule.
- *
- * Rules:
- *   completionpassed     — at least one session where all criteria ended with status='met'
- *   completionexhausted  — maxattempts > 0 and user has used all attempts (regardless of outcome)
- *
- * @param stdClass|cm_info $course   Course object (unused but required by API).
- * @param stdClass|cm_info $cm       Course module object.
- * @param int              $userid   User ID to check.
- * @param bool             $type     COMPLETION_AND or COMPLETION_OR (unused — we use OR logic).
- * @return int  COMPLETION_COMPLETE or COMPLETION_INCOMPLETE.
- */
-function aidialogue_get_completion_state($course, $cm, $userid, $type) {
-    global $DB;
-
-    $aidialogue = $DB->get_record('aidialogue', ['id' => $cm->instance], '*', MUST_EXIST);
-
-    // Rule: completionpassed — student passed at least one session (all criteria met).
-    if (!empty($aidialogue->completionpassed)) {
-        $sql = "SELECT COUNT(s.id)
-                  FROM {aidialogue_session} s
-                 WHERE s.aidialogueid = :aidialogueid
-                   AND s.userid = :userid
-                   AND s.status = 'complete'
-                   AND NOT EXISTS (
-                       SELECT 1
-                         FROM {aidialogue_criterion_result} cr
-                        WHERE cr.sessionid = s.id
-                          AND cr.status != 'met'
-                   )";
-        $passed = $DB->count_records_sql($sql, [
-            'aidialogueid' => $aidialogue->id,
-            'userid'       => $userid,
-        ]);
-        if ($passed > 0) {
-            return COMPLETION_COMPLETE;
-        }
-    }
-
-    // Rule: completionexhausted — maxattempts > 0 and all attempts used.
-    if (!empty($aidialogue->completionexhausted) && $aidialogue->maxattempts > 0) {
-        $used = $DB->count_records('aidialogue_session', [
-            'aidialogueid' => $aidialogue->id,
-            'userid'       => $userid,
-        ]);
-        if ($used >= $aidialogue->maxattempts) {
-            return COMPLETION_COMPLETE;
-        }
-    }
-
-    return COMPLETION_INCOMPLETE;
-}
-
-/**
- * Return a list of the custom completion rule descriptions for this module type.
- *
- * Used by the course completion report and the activity settings form.
- *
- * @param array $customdata The customdata array from cached_cm_info (from get_coursemodule_info).
- * @return array  Associative array of rule_key => display_string.
- */
-function aidialogue_get_completion_active_rule_descriptions($customdata) {
-    $descriptions = [];
-
-    if (!empty($customdata['customdata']['customcompletionrules'])) {
-        $rules = $customdata['customdata']['customcompletionrules'];
-        if (in_array('completionpassed', $rules)) {
-            $descriptions['completionpassed'] = get_string('completionpassed', 'aidialogue');
-        }
-        if (in_array('completionexhausted', $rules)) {
-            $descriptions['completionexhausted'] = get_string('completionexhausted', 'aidialogue');
-        }
-    }
-
-    return $descriptions;
 }

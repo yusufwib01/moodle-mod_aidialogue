@@ -33,22 +33,21 @@ namespace mod_aidialogue\local;
  *   BLOOMS_CUSTOM   = 8  — criterion description is used verbatim as AI instruction
  *
  * @package    mod_aidialogue
- * @copyright  2026 Moodle HQ
+ * @copyright  2026 Andi Permana <andi.permana@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class activity_config {
-
     /** @var int Bloom's level: Analyse — break down, identify parts, distinguish. */
-    const BLOOMS_ANALYSE = 1;
+    public const BLOOMS_ANALYSE = 1;
 
     /** @var int Bloom's level: Evaluate — judge, critique, weigh evidence. */
-    const BLOOMS_EVALUATE = 2;
+    public const BLOOMS_EVALUATE = 2;
 
     /** @var int Bloom's level: Create — synthesise, design, propose novel solutions. */
-    const BLOOMS_CREATE = 4;
+    public const BLOOMS_CREATE = 4;
 
     /** @var int Bloom's level: Custom — use criterion description verbatim as AI instruction. */
-    const BLOOMS_CUSTOM = 8;
+    public const BLOOMS_CUSTOM = 8;
 
     /** @var int Activity instance ID. */
     public readonly int $id;
@@ -173,14 +172,5 @@ class activity_config {
      */
     public function get_criterion(int $index): ?criterion_config {
         return $this->criteria[$index] ?? null;
-    }
-
-    /**
-     * Return the total number of criteria for this activity.
-     *
-     * @return int
-     */
-    public function criterion_count(): int {
-        return count($this->criteria);
     }
 }

@@ -22,11 +22,10 @@ namespace mod_aidialogue\local;
  * Constructed by activity_config — do not instantiate directly outside of that class.
  *
  * @package    mod_aidialogue
- * @copyright  2026 Moodle HQ
+ * @copyright  2026 Andi Permana <andi.permana@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class criterion_config {
-
     /** @var int DB row ID (aidialogue_criterion.id). 0 for stub criteria. */
     public readonly int $id;
 
@@ -51,6 +50,8 @@ class criterion_config {
     public readonly int $maxturns;
 
     /**
+     * Construct an immutable criterion configuration value object.
+     *
      * @param int    $id          DB row ID.
      * @param int    $sortorder   1-based processing order.
      * @param int    $bloomslevel One of activity_config::BLOOMS_* constants.
