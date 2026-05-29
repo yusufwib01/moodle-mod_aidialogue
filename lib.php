@@ -32,17 +32,18 @@ defined('MOODLE_INTERNAL') || die();
  */
 function aidialogue_supports($feature) {
     return match ($feature) {
-        FEATURE_MOD_ARCHETYPE => MOD_ARCHETYPE_OTHER,
-        FEATURE_GROUPS => false,
-        FEATURE_GROUPINGS => false,
-        FEATURE_MOD_INTRO => true,
+        FEATURE_MOD_ARCHETYPE           => MOD_ARCHETYPE_OTHER,
+        FEATURE_GROUPS                  => false,
+        FEATURE_GROUPINGS               => false,
+        FEATURE_MOD_INTRO               => true,
         FEATURE_COMPLETION_TRACKS_VIEWS => true,
-        FEATURE_GRADE_HAS_GRADE => false,
-        FEATURE_GRADE_OUTCOMES => false,
-        FEATURE_BACKUP_MOODLE2 => false,
-        FEATURE_SHOW_DESCRIPTION => true,
-        FEATURE_MOD_PURPOSE => MOD_PURPOSE_COMMUNICATION,
-        default => null,
+        FEATURE_COMPLETION_HAS_RULES    => true,
+        FEATURE_GRADE_HAS_GRADE         => false,
+        FEATURE_GRADE_OUTCOMES          => false,
+        FEATURE_BACKUP_MOODLE2          => false,
+        FEATURE_SHOW_DESCRIPTION        => true,
+        FEATURE_MOD_PURPOSE             => MOD_PURPOSE_COMMUNICATION,
+        default                         => null,
     };
 }
 
@@ -56,8 +57,15 @@ function aidialogue_supports($feature) {
 function aidialogue_add_instance($data, $mform = null) {
     global $DB;
 
-    $data->timecreated = time();
-    $data->timemodified = time();
+    $now = time();
+    $data->timecreated  = $now;
+    $data->timemodified = $now;
+
+    $data->knowledgetext       = $data->knowledgetext ?? '';
+    $data->maxattempts         = $data->maxattempts ?? 0;
+    $data->completionpassed    = $data->completionpassed ?? 0;
+    $data->completionexhausted = $data->completionexhausted ?? 0;
+
     $data->id = $DB->insert_record('aidialogue', $data);
 
     aidialogue_save_criteria((int)$data->id, $data);
@@ -86,6 +94,11 @@ function aidialogue_update_instance($data, $mform) {
     $data->timemodified = time();
     $data->id = $data->instance;
 
+    $data->knowledgetext       = $data->knowledgetext ?? '';
+    $data->maxattempts         = $data->maxattempts ?? 0;
+    $data->completionpassed    = $data->completionpassed ?? 0;
+    $data->completionexhausted = $data->completionexhausted ?? 0;
+
     $DB->update_record('aidialogue', $data);
 
     aidialogue_save_criteria((int)$data->id, $data);
@@ -102,7 +115,10 @@ function aidialogue_update_instance($data, $mform) {
 }
 
 /**
- * Delete AI Dialogue instance.
+ * Delete AI Dialogue instance and all associated data.
+ *
+ * Cascades to: aidialogue_criterion, aidialogue_session (and their child
+ * tables aidialogue_turn and aidialogue_criterion_result).
  *
  * @param int $id Instance id.
  * @return bool True on success.
@@ -117,12 +133,15 @@ function aidialogue_delete_instance($id) {
     $cm = get_coursemodule_from_instance('aidialogue', $id);
     \core_completion\api::update_completion_date_event($cm->id, 'aidialogue', $id, null);
 
-    $sessionids = $DB->get_fieldset_select('aidialogue_session', 'id', 'aidialogueid = ?', [$id]);
-    if ($sessionids) {
-        list($insql, $inparams) = $DB->get_in_or_equal($sessionids);
-        $DB->delete_records_select('aidialogue_turn', "sessionid $insql", $inparams);
-        $DB->delete_records_select('aidialogue_criterion_result', "sessionid $insql", $inparams);
+    // Collect session IDs so we can delete their child rows.
+    $sessionids = $DB->get_fieldset_select('aidialogue_session', 'id', 'aidialogueid = :id', ['id' => $id]);
+
+    if (!empty($sessionids)) {
+        [$insql, $inparams] = $DB->get_in_or_equal($sessionids);
+        $DB->delete_records_select('aidialogue_turn', "sessionid {$insql}", $inparams);
+        $DB->delete_records_select('aidialogue_criterion_result', "sessionid {$insql}", $inparams);
     }
+
     $DB->delete_records('aidialogue_session', ['aidialogueid' => $id]);
     $DB->delete_records('aidialogue_criterion', ['aidialogueid' => $id]);
     $DB->delete_records('aidialogue', ['id' => $aidialogue->id]);
@@ -198,13 +217,15 @@ function aidialogue_save_criteria(int $aidialogueid, stdClass $data): void {
     if ($submittedids) {
         [$notsql, $notparams] = $DB->get_in_or_equal($submittedids, SQL_PARAMS_QM, 'param', false);
         $todelete = $DB->get_fieldset_select(
-            'aidialogue_criterion', 'id',
+            'aidialogue_criterion',
+            'id',
             "aidialogueid = ? AND id $notsql",
             array_merge([$aidialogueid], $notparams),
         );
     } else {
         $todelete = $DB->get_fieldset_select(
-            'aidialogue_criterion', 'id',
+            'aidialogue_criterion',
+            'id',
             'aidialogueid = ?',
             [$aidialogueid],
         );
@@ -212,6 +233,10 @@ function aidialogue_save_criteria(int $aidialogueid, stdClass $data): void {
 
     if ($todelete) {
         [$delsql, $delparams] = $DB->get_in_or_equal($todelete);
+        // Null out criterionid on any turns that referenced a deleted criterion so the
+        // transcript content is preserved (the turn still appears in get_turns()) while
+        // the now-broken foreign key reference is removed.
+        $DB->set_field_select('aidialogue_turn', 'criterionid', null, "criterionid $delsql", $delparams);
         $DB->delete_records_select('aidialogue_criterion_result', "criterionid $delsql", $delparams);
         $DB->delete_records_select('aidialogue_criterion', "id $delsql", $delparams);
     }
@@ -298,7 +323,7 @@ function aidialogue_get_coursemodule_info($coursemodule) {
     $aidialogue = $DB->get_record(
         'aidialogue',
         ['id' => $coursemodule->instance],
-        'id, name, intro, introformat'
+        'id, name, intro, introformat, completionpassed, completionexhausted'
     );
 
     if (!$aidialogue) {
@@ -311,6 +336,12 @@ function aidialogue_get_coursemodule_info($coursemodule) {
     if ($coursemodule->showdescription) {
         $info->content = format_module_intro('aidialogue', $aidialogue, $coursemodule->id, false);
     }
+
+    // Advertise custom completion rules so the completion UI shows them.
+    $info->customdata['customcompletionrules'] = [
+        'completionpassed'    => $aidialogue->completionpassed,
+        'completionexhausted' => $aidialogue->completionexhausted,
+    ];
 
     return $info;
 }

@@ -80,7 +80,11 @@ class mod_aidialogue_mod_form extends moodleform_mod {
         $repeatarray[] = $mform->createElement('text', 'maxturns', get_string('maxturns', 'aidialogue'), ['size' => 4]);
         $repeatarray[] = $mform->createElement('hidden', 'criterionid', 0);
         $repeatarray[] = $mform->createElement(
-            'submit', 'delete_criterion', get_string('deletecriterion', 'aidialogue'), ['class' => 'btn-danger'], false
+            'submit',
+            'delete_criterion',
+            get_string('deletecriterion', 'aidialogue'),
+            ['class' => 'btn-danger'],
+            false
         );
 
         if ($this->_instance) {
@@ -233,7 +237,7 @@ class mod_aidialogue_mod_form extends moodleform_mod {
 
                 if ($maxturns < 1) {
                     $errors['maxturns[' . $key . ']'] = get_string('err_maxturnspositive', 'aidialogue');
-                } elseif ($maxturns <= $minturns) {
+                } else if ($maxturns <= $minturns) {
                     $errors['maxturns[' . $key . ']'] = get_string('err_maxturnsgtminturns', 'aidialogue');
                 }
             }

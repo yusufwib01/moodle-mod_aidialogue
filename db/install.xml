@@ -16,7 +16,7 @@
         <FIELD NAME="knowledgetext" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Teacher-authored source-of-truth injected into the AI system prompt."/>
         <FIELD NAME="maxattempts" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Max attempts a student is allowed. 0 = unlimited. Independent of completion rules."/>
         <FIELD NAME="completionpassed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Activity completes when student achieves a passed session. 0=off, 1=on. Passed = all criteria met in a single session."/>
-        <FIELD NAME="completionexhausted" TYPE="int" LENGTH="1" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="Fallback completion when all attempts exhausted without passing. Only fires when completionpassed=1 AND maxattempts>0."/>
+        <FIELD NAME="completionexhausted" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Fallback completion when all attempts exhausted without passing. Only fires when completionpassed=1 AND maxattempts>0."/>
       </FIELDS>
       <KEYS>
         <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
@@ -59,6 +59,7 @@
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — when session row was created."/>
         <FIELD NAME="timestarted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Unix timestamp — when student sent first message. Null until first turn."/>
         <FIELD NAME="timefinished" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Unix timestamp — when session_close fired. Null until session completes."/>
+        <FIELD NAME="earlyexit" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="1 if the student manually ended the session before completing all criteria."/>
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Unix timestamp — last change to this row."/>
       </FIELDS>
       <KEYS>
