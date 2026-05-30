@@ -35,8 +35,9 @@ $string['pluginname']         = 'AI Dialogue';
 $string['search:activity']    = 'AI Dialogue';
 
 // Capabilities.
-$string['aidialogue:addinstance'] = 'Add a new AI Dialogue activity';
-$string['aidialogue:view']        = 'View AI Dialogue activity';
+$string['aidialogue:addinstance']  = 'Add a new AI Dialogue activity';
+$string['aidialogue:view']         = 'View AI Dialogue activity';
+$string['aidialogue:viewreport']   = 'View class report';
 
 // Privacy.
 $string['privacy:metadata'] = 'The AI Dialogue activity stores conversation transcripts, session outcomes, and AI-generated reports as part of the assessment process. This data includes user-authored messages and is associated with the student\'s account.';
@@ -116,7 +117,7 @@ $string['err_maxturnspositive']    = 'Max turns must be at least 1.';
 $string['err_maxturnsgtminturns']  = 'Max turns must be greater than min turns.';
 
 // View page — state A (no session).
-$string['nosessionyet']        = 'You have not started this activity yet.';
+$string['nosessionyet']        = 'In this activity, you\'ll have a one-on-one conversation with an AI tutor. The AI will guide you through a series of questions and prompts based on the topic set by your teacher. Your responses will be assessed against learning criteria, and you\'ll receive personalised feedback and a grade at the end. When you\'re ready, press the button below to begin.';
 $string['attemptsallowed']     = 'You have {$a} attempt(s) allowed.';
 $string['startsession']        = 'Start session';
 $string['previousattempt']     = 'Your previous attempt';
@@ -125,9 +126,10 @@ $string['noattemptsremaining'] = 'You have no attempts remaining for this activi
 
 // View page — state B (active session).
 $string['conversation']    = 'Conversation';
+$string['privacynotice']   = 'Your conversation is private to you and your teacher.';
 $string['you']             = 'You';
 $string['ai']              = 'AI';
-$string['typeyourmessage'] = 'Type your message… (Ctrl+Enter to send)';
+$string['typeyourmessage'] = 'Type your response… (Ctrl+Enter to send)';
 $string['send']            = 'Send';
 $string['thinking']        = 'AI is thinking…';
 $string['endsession']         = 'End session';
@@ -137,6 +139,10 @@ $string['endsession_confirm'] = 'Are you sure you want to end this session? This
 $string['sessioncomplete']       = 'Session complete';
 $string['viewresults']           = 'View results';
 $string['yourfeedback']          = 'Your feedback';
+$string['yourresults']           = 'Your results';
+$string['strengths']             = 'Strengths';
+$string['areastoworkon']         = 'Areas to work on';
+$string['whattodonext']          = 'What to do next';
 $string['aigrade']               = 'AI suggested grade';
 $string['passed']                = 'Passed';
 $string['notpassed']             = 'Not yet passed';
@@ -159,3 +165,57 @@ $string['error:airesponsetruncated']  = 'The AI response was cut off because it 
 $string['error:maxattemptsreached']   = 'You have reached the maximum number of attempts for this activity.';
 $string['error:messageempty']         = 'Message cannot be empty.';
 $string['error:messagetoolong']       = 'Message exceeds maximum allowed length.';
+
+// Teacher report — navigation.
+$string['classreport'] = 'Results';
+
+// Teacher report — class report page (report.php).
+$string['criteriaoverview']     = 'Criteria overview';
+$string['studentlist']          = 'Student list';
+$string['nstudent']             = '{$a} student';
+$string['nstudents']            = '{$a} students';
+$string['lastattempt']          = 'Last attempt';
+$string['clickrowfordetails']   = 'Click any row to view details';
+$string['legendmet']            = 'Met';
+$string['legendpartial']        = 'Partial';
+$string['legendlimit']          = 'Limit';
+$string['legendpending']        = 'Pending';
+$string['metofn']               = 'Met: {$a->met}/{$a->total}';
+$string['moststruggled']        = 'Most students struggled here';
+$string['statuscomplete']       = 'Complete';
+$string['statusactive']         = 'Active';
+$string['statuspending']        = 'Pending';
+$string['nostudents']           = 'No students enrolled.';
+
+// Teacher report — session review page (review.php).
+$string['rubriceval']            = 'Rubric evaluation';
+$string['aisummary']             = 'AI summary';
+$string['gradeheader']           = 'Grade';
+$string['aisuggested']           = 'AI suggested';
+$string['teachergradelabel']     = 'Your grade';
+$string['savegrade']             = 'Save grade';
+$string['fulltranscript']        = 'Full transcript';
+$string['attemptlabel']          = 'Attempt {$a}';
+$string['selectattempt']         = 'Select attempt';
+$string['nmessages']             = '{$a} messages';
+$string['transcriptcol_role']    = 'Role';
+$string['transcriptcol_move']    = 'Move type';
+$string['transcriptcol_message'] = 'Message';
+$string['evidence']              = 'Evidence';
+$string['generatedfromsession']  = 'Generated from session: {$a}';
+
+// Criterion result status labels.
+$string['criteriastatus_met']         = 'Met';
+$string['criteriastatus_partial']     = 'Partial';
+$string['criteriastatus_limit']       = 'Limit';
+$string['criteriastatus_pending']     = 'Pending';
+$string['criteriastatus_inprogress']  = 'In progress';
+$string['criteriastatus_abandoned']   = 'Abandoned';
+
+// Turn move labels (shown in Full transcript).
+$string['move_session_open']    = 'Session opened';
+$string['move_criterion_open']  = 'Criterion opened';
+$string['move_probe_deeper']    = 'Probe deeper';
+$string['move_probe_clarify']   = 'Probe clarify';
+$string['move_criterion_close'] = 'Criterion closed';
+$string['move_session_close']   = 'Session closed';

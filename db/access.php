@@ -36,6 +36,16 @@ $capabilities = [
         ],
     ],
 
+    'mod/aidialogue:viewreport' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_MODULE,
+        'archetypes' => [
+            'teacher'        => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+    ],
+
     'mod/aidialogue:addinstance' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',

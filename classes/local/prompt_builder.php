@@ -152,14 +152,14 @@ EOT
         if ($earlyexit) {
             $instruction = <<<'EOT'
 The student has chosen to end the session early before completing all criteria. Write a brief,
-warm closing message (1–2 sentences) acknowledging their decision and wishing them well. Do not
+warm closing message (1-2 sentences) acknowledging their decision and wishing them well. Do not
 reveal any assessment outcomes or grades.
 
 End your response with [MOVE:session_close].
 EOT;
         } else {
             $instruction = <<<'EOT'
-The assessment is now complete. Write a brief, warm closing message to the student (2–3
+The assessment is now complete. Write a brief, warm closing message to the student (2-3
 sentences). Thank them for their participation and let them know their responses have been
 recorded. Do not reveal any assessment outcomes or grades.
 
@@ -358,12 +358,52 @@ Guidelines:
 - Keep the tone encouraging and academic.
 - Do NOT refer to topics by number or internal label (e.g. "Criterion 1", "Criterion 2"). Refer to the topic or skill by name.
 - Do NOT include grades or percentage scores.
-- Length: 150–250 words.
 - Do not include a [MOVE:...] tag in this response.
+
+Structure your response using EXACTLY these three section headings, each on its own line:
+
+STRENGTHS:
+[2-4 sentences about what the student did well.]
+
+AREAS TO WORK ON:
+[2-4 sentences about specific gaps or weaknesses.]
+
+WHAT TO DO NEXT:
+[2-4 sentences of actionable, specific study recommendations.]
 EOT
 ,
             ],
         ];
+    }
+
+    /**
+     * Parse a structured student report into its three labelled sections.
+     *
+     * Expects the AI to have used the headings STRENGTHS:, AREAS TO WORK ON:,
+     * and WHAT TO DO NEXT: on their own lines. Falls back to putting the full
+     * text in 'strengths' when the headings are absent (e.g. legacy sessions).
+     *
+     * @param string $raw Raw AI-generated student report text.
+     * @return array{strengths: string, areas: string, next: string}
+     */
+    public static function parse_student_report(string $raw): array {
+        $result = ['strengths' => '', 'areas' => '', 'next' => ''];
+
+        if (preg_match('/STRENGTHS:\s*(.*?)(?=AREAS TO WORK ON:|$)/si', $raw, $m)) {
+            $result['strengths'] = trim($m[1]);
+        }
+        if (preg_match('/AREAS TO WORK ON:\s*(.*?)(?=WHAT TO DO NEXT:|$)/si', $raw, $m)) {
+            $result['areas'] = trim($m[1]);
+        }
+        if (preg_match('/WHAT TO DO NEXT:\s*(.*?)$/si', $raw, $m)) {
+            $result['next'] = trim($m[1]);
+        }
+
+        if ($result['strengths'] === '' && $result['areas'] === '' && $result['next'] === '') {
+            $result['strengths'] = trim($raw);
+        }
+
+        return $result;
     }
 
     /**
@@ -412,10 +452,10 @@ Guidelines:
 - Write in third person ("The student demonstrated...", "The student struggled with...").
 - Address each criterion in turn, referencing specific student responses where relevant.
 - Be factual and evaluative, not encouraging.
-- Length: 150–250 words.
+- Length: 150-250 words.
 - On the very last line, output ONLY the following (no other text on that line):
   GRADE:nn.nn
-  where nn.nn is your suggested overall percentage grade (0.00–100.00) based on the outcomes.
+  where nn.nn is your suggested overall percentage grade (0.00-100.00) based on the outcomes.
 - Do not include a [MOVE:...] tag in this response.
 EOT
 ,
